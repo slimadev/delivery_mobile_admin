@@ -1,0 +1,31 @@
+{
+  "project_info": {
+    "project_number": "561778402648",
+    "firebase_url": "https://aika-b3957-default-rtdb.firebaseio.com",
+    "project_id": "aika-b3957",
+    "storage_bucket": "aika-b3957.firebasestorage.app"
+  },
+  "client": [
+   
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:561778402648:android:becba813d282e40961b12d",
+        "android_client_info": {
+          "package_name": "com.emart.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnjs661IN9_KtWSdv-aJ9tCPGZPiDi2LU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
