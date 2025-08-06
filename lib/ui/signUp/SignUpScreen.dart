@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart' as easyLocal;
@@ -9,6 +10,7 @@ import 'package:emartdriver/model/CarModel.dart';
 import 'package:emartdriver/model/SectionModel.dart';
 import 'package:emartdriver/model/User.dart';
 import 'package:emartdriver/model/VehicleType.dart';
+import 'package:emartdriver/model/Vehicle_Types.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/ui/auth/AuthScreen.dart';
@@ -19,11 +21,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
+import 'package:emartdriver/theme/app_them_data.dart';
+import 'package:intl/intl.dart';
+import 'package:emartdriver/services/show_toast_dialog.dart';
 
 File? _image;
 File? _carImage;
 
 class SignUpScreen extends StatefulWidget {
+  final bool fromAccountDetails;
+  SignUpScreen({this.fromAccountDetails = false});
   @override
   State createState() => _SignUpState();
 }
@@ -32,7 +39,9 @@ class _SignUpState extends State<SignUpScreen> {
   final ImagePicker _imagePicker = ImagePicker();
   TextEditingController _firstNameController = TextEditingController();
   TextEditingController _lastNameController = TextEditingController();
+  TextEditingController _vehicleController = TextEditingController();
   TextEditingController _carNameController = TextEditingController();
+  TextEditingController _carMakeController = TextEditingController();
   TextEditingController _carPlateController = TextEditingController();
   TextEditingController _carColorController = TextEditingController();
   TextEditingController _emailController = TextEditingController();
@@ -40,9 +49,7 @@ class _SignUpState extends State<SignUpScreen> {
   TextEditingController _passwordController = TextEditingController();
   TextEditingController _confirmPasswordController = TextEditingController();
   GlobalKey<FormState> _deliveryKey = GlobalKey();
-  GlobalKey<FormState> _cabServiceKey = GlobalKey();
-  GlobalKey<FormState> _parcelServiceKey = GlobalKey();
-  GlobalKey<FormState> _rentalServiceKey = GlobalKey();
+
   bool isUserImage = true;
   AutovalidateMode _validate = AutovalidateMode.disabled;
 
@@ -57,17 +64,27 @@ class _SignUpState extends State<SignUpScreen> {
   ]; // Option 2
   String? _selectedServiceType;
 
+  Timer? _autoReloadTimer;
+
   @override
   void initState() {
-    getCarMakes();
     super.initState();
+    getCarMakes();
+    getVehicles();
+    _refreshCurrentUser();
+    // Auto reload a cada 15 segundos
+    _autoReloadTimer = Timer.periodic(Duration(seconds: 15), (timer) {
+      _refreshCurrentUser();
+    });
   } // Option 2
 
+  List<VehicleTypes> vehiclesList = [];
   List<CarMakes> carMakesList = [];
   List<CarModel> carModelList = [];
 
   CarMakes? selectedCarMakes;
   CarModel? selectedCarModel;
+  VehicleTypes? selectedVehicle;
   List<VehicleType> vehicleType = [];
   List<VehicleType> rentalVehicleType = [];
   VehicleType? selectedRentalVehicleType;
@@ -96,219 +113,450 @@ class _SignUpState extends State<SignUpScreen> {
     });
   }
 
+  getVehicles() async {
+    await FireStoreUtils.getVehicles().then((value) {
+      setState(() {
+        vehiclesList = value;
+      });
+    });
+  }
+
+  void _refreshCurrentUser() async {
+    final userStream =
+        FireStoreUtils().getUserByID(MyAppState.currentUser!.userID);
+    final user = await userStream.first;
+    setState(() {
+      MyAppState.currentUser = user;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (Platform.isAndroid) {
-      retrieveLostData();
-    }
+    final status =
+        MyAppState.currentUser?.active == true ? 'Approved' : 'Pending';
+    final statusColor = _getStatusColor(status);
+    // final User user =
+    //     FireStoreUtils().getUserByID(MyAppState.currentUser!.userID);
 
     return Scaffold(
       appBar: AppBar(
-        elevation: 0.0,
-        backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(
-            color: isDarkMode(context) ? Colors.white : Colors.black),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        centerTitle: true,
+        title: Text(
+          'Personal Information'.tr(),
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ).tr(),
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Container(
           margin: EdgeInsets.only(left: 16.0, right: 16, bottom: 16),
           child: Column(
             children: [
-              Align(
-                  alignment: Directionality.of(context) == TextDirection.ltr
-                      ? Alignment.topLeft
-                      : Alignment.topRight,
-                  child: Text(
-                    'Create new account',
-                    style: TextStyle(
-                        color: Color(COLOR_PRIMARY),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 25.0),
-                  ).tr()),
-              Padding(
-                padding: const EdgeInsets.only(
-                    left: 8.0, top: 32, right: 8, bottom: 8),
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 20),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: <Widget>[
-                        CircleAvatar(
-                          radius: 65,
-                          backgroundColor: Colors.grey.shade400,
-                          child: ClipOval(
-                            child: SizedBox(
-                              width: 170,
-                              height: 170,
-                              child: _image == null
-                                  ? Image.asset(
-                                      'assets/images/placeholder.jpg',
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Image.file(
-                                      _image!,
-                                      fit: BoxFit.cover,
-                                    ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 80,
-                          right: 0,
-                          child: FloatingActionButton(
-                            heroTag: 'profileImage',
-                            backgroundColor: Color(COLOR_ACCENT),
-                            child: Icon(
-                              CupertinoIcons.camera,
-                              color: isDarkMode(context)
-                                  ? Colors.black
-                                  : Colors.white,
-                            ),
-                            mini: true,
-                            onPressed: () => _onCameraClick(true),
-                          ),
-                        )
-                      ],
+                    GestureDetector(
+                      onTap: () => _onCameraClick(true),
+                      child: CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Color(COLOR_PRIMARY),
+                        child: MyAppState.currentUser?.profilePictureURL !=
+                                    null &&
+                                MyAppState
+                                    .currentUser!.profilePictureURL!.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(30),
+                                child: Image.network(
+                                  MyAppState.currentUser!.profilePictureURL!,
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Icon(
+                                Icons.person,
+                                size: 30,
+                                color: Colors.white,
+                              ),
+                      ),
                     ),
-                    Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: <Widget>[
-                        CircleAvatar(
-                          radius: 65,
-                          backgroundColor: Colors.grey.shade400,
-                          child: ClipOval(
-                            child: SizedBox(
-                              width: 170,
-                              height: 170,
-                              child: _carImage == null
-                                  ? Image.asset(
-                                      'assets/images/car_default_image.png',
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Image.file(
-                                      _carImage!,
-                                      fit: BoxFit.cover,
-                                    ),
+                    SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${MyAppState.currentUser?.firstName ?? ''} ${MyAppState.currentUser?.lastName ?? ''}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
                           ),
-                        ),
-                        Positioned(
-                          left: 80,
-                          right: 0,
-                          child: FloatingActionButton(
-                            heroTag: 'carImage',
-                            backgroundColor: Color(COLOR_ACCENT),
-                            child: Icon(
-                              CupertinoIcons.camera,
-                              color: isDarkMode(context)
-                                  ? Colors.black
-                                  : Colors.white,
+                          SizedBox(height: 4),
+                          Text(
+                            MyAppState.currentUser?.vehicleType ??
+                                'Tipo de veículo não definido',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
                             ),
-                            mini: true,
-                            onPressed: () => _onCameraClick(false),
                           ),
-                        )
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: DropdownButtonFormField(
-                  hint: Text('Please choose a service type.'),
-                  // Not necessary for Option 1
-                  value: _selectedServiceType,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedServiceType = newValue.toString();
-                    });
-                  },
-                  decoration: InputDecoration(
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30.0),
-                        borderSide: BorderSide(
-                            color: Color(COLOR_PRIMARY), width: 2.0)),
+              // Divider(height: 1),
+              SizedBox(height: 16),
+              _buildDocumentCard(
+                title: 'Pre-registration'.tr(),
+                subtitle: MyAppState.currentUser?.createdAt != null
+                    ? 'Filled on ${DateFormat('dd/MM/yyyy').format(MyAppState.currentUser!.createdAt!.toDate())}'
+                    : 'Not filled'.tr(),
+                status: status.tr(),
+                statusColor: statusColor,
+                onTap: null, // Pre-registration is not clickable
+              ),
+              SizedBox(height: 16),
+              _buildDocumentCard(
+                  title: 'Car Photo'.tr(),
+                  subtitle: (MyAppState.currentUser?.carPictureStatus ==
+                          'Rejected')
+                      ? (MyAppState.currentUser?.carPictureRejectionReason ??
+                              'Rejected')
+                          .tr()
+                      : (MyAppState.currentUser?.carPictureURL != null &&
+                              MyAppState.currentUser!.carPictureURL.isNotEmpty
+                          ? 'Submitted'.tr()
+                          : 'Not submitted'.tr()),
+                  status: MyAppState.currentUser?.carPictureStatus != null &&
+                          MyAppState.currentUser!.carPictureStatus.isNotEmpty
+                      ? MyAppState.currentUser!.carPictureStatus.tr()
+                      : 'Pending'.tr(),
+                  statusColor: _getStatusColor(
+                      MyAppState.currentUser?.carPictureStatus ?? 'Pending'),
+                  onTap: () =>
+                      _showImagePicker('carPictureURL', 'carPictureStatus')),
+              SizedBox(height: 16),
+
+              _buildDocumentCard(
+                title: 'Driver License'.tr(),
+                subtitle: (MyAppState.currentUser?.driverProofStatus ==
+                        'Rejected')
+                    ? (MyAppState.currentUser?.driverProofRejectionReason ??
+                            'Rejected')
+                        .tr()
+                    : (MyAppState.currentUser?.driverProofPictureURL != null &&
+                            MyAppState
+                                .currentUser!.driverProofPictureURL!.isNotEmpty
+                        ? 'Submitted'.tr()
+                        : 'Not submitted'.tr()),
+                status: MyAppState.currentUser?.driverProofStatus != null &&
+                        MyAppState.currentUser!.driverProofStatus.isNotEmpty
+                    ? MyAppState.currentUser!.driverProofStatus.tr()
+                    : 'Pending'.tr(),
+                statusColor: _getStatusColor(
+                    MyAppState.currentUser?.driverProofStatus ?? 'Pending'),
+                onTap: () => _showImagePicker(
+                    'driverProofPictureURL', 'driverProofStatus'),
+              ),
+              SizedBox(height: 16),
+              _buildDocumentCard(
+                title: 'Criminal Record'.tr(),
+                subtitle: (MyAppState.currentUser?.criminalRecordStatus ==
+                        'Rejected')
+                    ? (MyAppState.currentUser?.criminalRecordRejectionReason ??
+                            'Rejected')
+                        .tr()
+                    : (MyAppState.currentUser?.criminalRecordPictureURL !=
+                                null &&
+                            MyAppState.currentUser!.criminalRecordPictureURL!
+                                .isNotEmpty
+                        ? 'Submitted'.tr()
+                        : 'Not submitted'.tr()),
+                status:
+                    (MyAppState.currentUser?.criminalRecordStatus ?? 'Pending')
+                        .tr(),
+                statusColor: _getStatusColor(
+                    MyAppState.currentUser?.criminalRecordStatus ?? 'Pending'),
+                onTap: () => _showImagePicker(
+                    'criminalRecordPictureURL', 'criminalRecordStatus'),
+              ),
+              SizedBox(height: 16),
+              _buildDocumentCard(
+                title: 'Proof of Residence or NUIT'.tr(),
+                subtitle: (MyAppState.currentUser?.nuitStatus == 'Rejected')
+                    ? (MyAppState.currentUser?.nuitRejectionReason ??
+                            'Rejected')
+                        .tr()
+                    : (MyAppState.currentUser?.nuitPictureURL != null &&
+                            MyAppState.currentUser!.nuitPictureURL!.isNotEmpty
+                        ? 'Submitted'.tr()
+                        : 'Not submitted'.tr()),
+                status: (MyAppState.currentUser?.nuitStatus ?? 'Pending').tr(),
+                statusColor: _getStatusColor(
+                    MyAppState.currentUser?.nuitStatus ?? 'Pending'),
+                onTap: () => _showImagePicker('nuitPictureURL', 'nuitStatus'),
+              ),
+              SizedBox(height: 16),
+              _buildDocumentCard(
+                title: 'Car Registration'.tr(),
+                subtitle: (MyAppState.currentUser?.carProofStatus == 'Rejected')
+                    ? (MyAppState.currentUser?.carProofRejectionReason ??
+                            'Rejected')
+                        .tr()
+                    : (MyAppState.currentUser?.carProofPictureURL != null &&
+                            MyAppState
+                                .currentUser!.carProofPictureURL!.isNotEmpty
+                        ? 'Submitted'.tr()
+                        : 'Not submitted'.tr()),
+                status:
+                    (MyAppState.currentUser?.carProofStatus ?? 'Pending').tr(),
+                statusColor: _getStatusColor(
+                    MyAppState.currentUser?.carProofStatus ?? 'Pending'),
+                onTap: () =>
+                    _showImagePicker('carProofPictureURL', 'carProofStatus'),
+              ),
+              SizedBox(height: 16),
+              _buildDocumentCard(
+                title: 'Insurance Type'.tr(),
+                subtitle:
+                    '', // Assuming no specific field for this in User model
+                status: '', // Assuming no specific field for this in User model
+                statusColor: Colors.transparent,
+                onTap: null, // Not a photo document
+              ),
+              SizedBox(height: 32),
+              Container(
+                width: double.infinity,
+                margin: EdgeInsets.symmetric(horizontal: 16),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(COLOR_PRIMARY),
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
                   ),
-                  items: _locations.map((location) {
-                    return DropdownMenuItem(
-                      child: new Text(location),
-                      value: location,
-                    );
-                  }).toList(),
-                ),
-              ),
-              _selectedServiceType == "Delivery service"
-                  ? Form(
-                      key: _deliveryKey,
-                      autovalidateMode: _validate,
-                      child: formUI(),
-                    )
-                  : _selectedServiceType == "Parcel service"
-                      ? Form(
-                          key: _parcelServiceKey,
-                          autovalidateMode: _validate,
-                          child: formParcelServiceUI(),
-                        )
-                      : _selectedServiceType == "Rental Service"
-                          ? Form(
-                              key: _rentalServiceKey,
-                              autovalidateMode: _validate,
-                              child: formRentalServiceUI(),
-                            )
-                          : _selectedServiceType == "Cab service"
-                              ? Form(
-                                  key: _cabServiceKey,
-                                  autovalidateMode: _validate,
-                                  child: formCabServiceUI(),
-                                )
-                              : Container(),
-              Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Center(
+                  onPressed: () async {
+                    ShowToastDialog.showLoader("Saving changes...".tr());
+                    try {
+                      User? updatedUser =
+                          await FireStoreUtils.updateCurrentUser(
+                              MyAppState.currentUser!);
+                      if (updatedUser != null) {
+                        MyAppState.currentUser = updatedUser;
+                        ShowToastDialog.closeLoader();
+                        if (widget.fromAccountDetails) {
+                          Navigator.pop(context);
+                        } else {
+                          pushAndRemoveUntil(
+                              context,
+                              ContainerScreen(user: MyAppState.currentUser!),
+                              false);
+                        }
+                      } else {
+                        ShowToastDialog.closeLoader();
+                        ShowToastDialog.showToast("Error saving changes".tr());
+                      }
+                    } catch (e) {
+                      ShowToastDialog.closeLoader();
+                      ShowToastDialog.showToast(
+                          "Error saving changes: $e".tr());
+                    }
+                  },
                   child: Text(
-                    'OR',
+                    'Save changes'.tr(),
                     style: TextStyle(
-                        color:
-                            isDarkMode(context) ? Colors.white : Colors.black),
-                  ).tr(),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
-              InkWell(
-                onTap: () {
-                  push(context, PhoneNumberInputScreen(login: false));
-                },
-                child: Padding(
-                  padding: EdgeInsets.only(top: 10, right: 10, left: 10),
-                  child: Container(
-                      alignment: Alignment.bottomCenter,
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(25),
-                          border: Border.all(
-                              color: Color(COLOR_PRIMARY), width: 1)),
-                      child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Icon(
-                              Icons.phone,
-                              color: Color(COLOR_PRIMARY),
-                            ),
-                            Text(
-                              'Sign up with phone number'.tr(),
-                              style: TextStyle(
-                                  color: Color(COLOR_PRIMARY),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  letterSpacing: 1),
-                            ),
-                          ])),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Approved':
+        return Colors.green;
+      case 'Under review':
+        return Colors.orange;
+      case 'Rejected':
+        return Colors.red;
+      case 'Pending':
+        return Colors.grey;
+      default:
+        return Colors.transparent;
+    }
+  }
+
+  Future<void> _pickImageAndUpload(
+      ImageSource source, String fieldName, String statusFieldName) async {
+    final pickedFile = await _imagePicker.pickImage(source: source);
+    if (pickedFile != null) {
+      File imageFile = File(pickedFile.path);
+      ShowToastDialog.showLoader('Uploading image...');
+      String? imageUrl = await FireStoreUtils.uploadUserImageAndGetURL(
+          imageFile, fieldName, context);
+      ShowToastDialog.closeLoader(); // Dismiss progress dialog
+
+      if (imageUrl != null) {
+        setState(() {
+          // Update the specific field in MyAppState.currentUser
+          switch (fieldName) {
+            case 'profilePictureURL':
+              MyAppState.currentUser!.profilePictureURL = imageUrl;
+              MyAppState.currentUser!.profilePictureStatus = 'Under review';
+              break;
+            case 'driverProofPictureURL':
+              MyAppState.currentUser!.driverProofPictureURL = imageUrl;
+              MyAppState.currentUser!.driverProofStatus = 'Under review';
+              break;
+            case 'criminalRecordPictureURL':
+              MyAppState.currentUser!.criminalRecordPictureURL = imageUrl;
+              MyAppState.currentUser!.criminalRecordStatus = 'Under review';
+              break;
+            case 'nuitPictureURL':
+              MyAppState.currentUser!.nuitPictureURL = imageUrl;
+              MyAppState.currentUser!.nuitStatus = 'Under review';
+              break;
+            case 'carProofPictureURL':
+              MyAppState.currentUser!.carProofPictureURL = imageUrl;
+              MyAppState.currentUser!.carProofStatus = 'Under review';
+              break;
+            case 'carPictureURL':
+              MyAppState.currentUser!.carPictureURL = imageUrl;
+              MyAppState.currentUser!.carPictureStatus = 'Under review';
+              break;
+          }
+        });
+        await FireStoreUtils.updateCurrentUser(
+            MyAppState.currentUser!); // Persist changes
+        ShowToastDialog.showToast('Photo sent for validation.'.tr());
+      } else {
+        ShowToastDialog.showToast('Failed to send photo.'.tr());
+      }
+    }
+  }
+
+  void _showImagePicker(String fieldName, String statusFieldName) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: Icon(
+                  Icons.photo_library,
+                  color: AppThemeData.white,
                 ),
-              )
+                title: Text(
+                  'Gallery'.tr(),
+                  selectionColor: AppThemeData.white,
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageAndUpload(
+                      ImageSource.gallery, fieldName, statusFieldName);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_camera, color: AppThemeData.white),
+                title: Text('Camera'.tr(), selectionColor: AppThemeData.white),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageAndUpload(
+                      ImageSource.camera, fieldName, statusFieldName);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDocumentCard({
+    required String title,
+    required String subtitle,
+    required String status,
+    required Color statusColor,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: AppThemeData.grey, width: 1.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty) ...[
+                      SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (status.isNotEmpty)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -403,7 +651,7 @@ class _SignUpState extends State<SignUpScreen> {
     showCupertinoModalPopup(context: context, builder: (context) => action);
   }
 
-  _onCameraClick(bool isUserImage) {
+  _onCameraClick(bool isUserImage) async {
     isUserImage = isUserImage;
     final action = CupertinoActionSheet(
       message: Text(
@@ -418,12 +666,33 @@ class _SignUpState extends State<SignUpScreen> {
             Navigator.pop(context);
             XFile? image =
                 await _imagePicker.pickImage(source: ImageSource.gallery);
-            if (image != null)
+            if (image != null) {
               setState(() {
                 isUserImage
                     ? _image = File(image.path)
                     : _carImage = File(image.path);
               });
+
+              if (isUserImage && _image != null) {
+                ShowToastDialog.showLoader("Uploading image...".tr());
+                String? imageUrl =
+                    await FireStoreUtils.uploadUserImageToFireStorage(
+                  _image!,
+                  MyAppState.currentUser!.userID,
+                );
+                if (imageUrl != null) {
+                  MyAppState.currentUser!.profilePictureURL = imageUrl;
+                  MyAppState.currentUser!.profilePictureStatus = 'Under review';
+                  User? updatedUser = await FireStoreUtils.updateCurrentUser(
+                      MyAppState.currentUser!);
+                  if (updatedUser != null) {
+                    MyAppState.currentUser = updatedUser;
+                    setState(() {});
+                  }
+                }
+                ShowToastDialog.closeLoader();
+              }
+            }
           },
         ),
         CupertinoActionSheetAction(
@@ -433,24 +702,35 @@ class _SignUpState extends State<SignUpScreen> {
             Navigator.pop(context);
             XFile? image =
                 await _imagePicker.pickImage(source: ImageSource.camera);
-            if (image != null)
+            if (image != null) {
               setState(() {
                 isUserImage
                     ? _image = File(image.path)
                     : _carImage = File(image.path);
               });
+
+              if (isUserImage && _image != null) {
+                ShowToastDialog.showLoader("Uploading image...".tr());
+                String? imageUrl =
+                    await FireStoreUtils.uploadUserImageToFireStorage(
+                  _image!,
+                  MyAppState.currentUser!.userID,
+                );
+                if (imageUrl != null) {
+                  MyAppState.currentUser!.profilePictureURL = imageUrl;
+                  MyAppState.currentUser!.profilePictureStatus = 'Under review';
+                  User? updatedUser = await FireStoreUtils.updateCurrentUser(
+                      MyAppState.currentUser!);
+                  if (updatedUser != null) {
+                    MyAppState.currentUser = updatedUser;
+                    setState(() {});
+                  }
+                }
+                ShowToastDialog.closeLoader();
+              }
+            }
           },
         ),
-        CupertinoActionSheetAction(
-          child: Text('Remove picture').tr(),
-          isDestructiveAction: true,
-          onPressed: () async {
-            Navigator.pop(context);
-            setState(() {
-              isUserImage ? _image = null : _carImage = null;
-            });
-          },
-        )
       ],
       cancelButton: CupertinoActionSheetAction(
         child: Text('Cancel').tr(),
@@ -539,25 +819,21 @@ class _SignUpState extends State<SignUpScreen> {
             ),
           ),
         ),
+        // Campo: Tipo de Veículo
+// Campo: Tipo de Veículo
         ConstrainedBox(
           constraints: BoxConstraints(minWidth: double.infinity),
           child: Padding(
             padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _carNameController,
-              validator: validateEmptyField,
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: Color(COLOR_PRIMARY),
-              textInputAction: TextInputAction.next,
+            child: DropdownButtonFormField<VehicleTypes>(
               decoration: InputDecoration(
                 contentPadding:
                     EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Car Model'.tr(),
                 focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                  borderRadius: BorderRadius.circular(25.0),
+                  borderSide:
+                      BorderSide(color: Color(COLOR_PRIMARY), width: 2.0),
+                ),
                 errorBorder: OutlineInputBorder(
                   borderSide:
                       BorderSide(color: Theme.of(context).colorScheme.error),
@@ -573,6 +849,149 @@ class _SignUpState extends State<SignUpScreen> {
                   borderRadius: BorderRadius.circular(25.0),
                 ),
               ),
+              validator: (value) =>
+                  value == null ? 'field required'.tr() : null,
+              value: selectedVehicle,
+              onChanged: (VehicleTypes? value) async {
+                setState(() {
+                  selectedVehicle = value;
+                  carMakesList.clear();
+                  selectedCarMakes = null;
+                  carModelList.clear();
+                  selectedCarModel = null;
+                });
+                if (value != null) {
+                  try {
+                    await FireStoreUtils.getCarMakes(value.name).then((makes) {
+                      setState(() {
+                        carMakesList = makes;
+                      });
+                    });
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error loading brands: $e'.tr())),
+                    );
+                  }
+                }
+              },
+              hint: Text('Select Vehicle Type'.tr()),
+              items: vehiclesList.map((VehicleTypes item) {
+                return DropdownMenuItem<VehicleTypes>(
+                  child: Text(item.name.toString()),
+                  value: item,
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+// Campo: Marca do Veículo
+        // Campo: Marca do Veículo
+        ConstrainedBox(
+          constraints: BoxConstraints(minWidth: double.infinity),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
+            child: DropdownButtonFormField<CarMakes>(
+              decoration: InputDecoration(
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25.0),
+                  borderSide:
+                      BorderSide(color: Color(COLOR_PRIMARY), width: 2.0),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderRadius: BorderRadius.circular(25.0),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderRadius: BorderRadius.circular(25.0),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(25.0),
+                ),
+              ),
+              validator: (value) =>
+                  value == null ? 'field required'.tr() : null,
+              value: selectedCarMakes,
+              onChanged: (CarMakes? value) async {
+                setState(() {
+                  selectedCarMakes = value;
+                  carModelList.clear();
+                  selectedCarModel = null;
+                });
+                if (value != null && value.name != null) {
+                  try {
+                    await FireStoreUtils.getCarModel(context, value.name!)
+                        .then((models) {
+                      setState(() {
+                        carModelList = models;
+                      });
+                    });
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error loading models: $e'.tr())),
+                    );
+                  }
+                }
+              },
+              hint: Text('Select Vehicle Brand'.tr()),
+              items: carMakesList.map((CarMakes item) {
+                return DropdownMenuItem<CarMakes>(
+                  child: Text(item.name.toString()),
+                  value: item,
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        // Campo: Modelo do Carro
+        ConstrainedBox(
+          constraints: BoxConstraints(minWidth: double.infinity),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
+            child: DropdownButtonFormField<CarModel>(
+              decoration: InputDecoration(
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25.0),
+                  borderSide:
+                      BorderSide(color: Color(COLOR_PRIMARY), width: 2.0),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderRadius: BorderRadius.circular(25.0),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderRadius: BorderRadius.circular(25.0),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(25.0),
+                ),
+              ),
+              validator: (value) =>
+                  value == null ? 'field required'.tr() : null,
+              value: selectedCarModel,
+              onChanged: (value) {
+                setState(() {
+                  selectedCarModel = value;
+                });
+              },
+              hint: Text('Select Car Model'.tr()),
+              items: carModelList.map((CarModel item) {
+                return DropdownMenuItem<CarModel>(
+                  child: Text(item.name.toString()),
+                  value: item,
+                );
+              }).toList(),
             ),
           ),
         ),
@@ -613,34 +1032,66 @@ class _SignUpState extends State<SignUpScreen> {
             ),
           ),
         ),
-        Padding(
-          padding: EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                shape: BoxShape.rectangle,
-                border: Border.all(color: Colors.grey.shade200)),
-            child: InternationalPhoneNumberInput(
-              onInputChanged: (PhoneNumber number) =>
-                  _mobileController.text = number.phoneNumber.toString(),
-              ignoreBlank: true,
-              autoValidateMode: AutovalidateMode.onUserInteraction,
-              inputDecoration: InputDecoration(
-                hintText: 'Phone Number'.tr(),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-                isDense: true,
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              inputBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-              ),
-              selectorConfig:
-                  SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
+        ConstrainedBox(
+          constraints: BoxConstraints(minWidth: double.infinity),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
+            child: FormField<String>(
+              validator: (value) => _mobileController.text.isEmpty
+                  ? 'Phone number required'.tr()
+                  : null,
+              builder: (FormFieldState<String> state) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(25),
+                        shape: BoxShape.rectangle,
+                        border: Border.all(
+                          color: state.hasError
+                              ? Theme.of(context).colorScheme.error
+                              : Colors.grey.shade200,
+                        ),
+                      ),
+                      child: InternationalPhoneNumberInput(
+                        onInputChanged: (PhoneNumber number) {
+                          _mobileController.text =
+                              number.phoneNumber.toString();
+                          state.didChange(
+                              number.phoneNumber); // Atualiza o estado do campo
+                        },
+                        ignoreBlank: true,
+                        autoValidateMode: AutovalidateMode.disabled,
+                        inputDecoration: InputDecoration(
+                          hintText: 'Phone Number'.tr(),
+                          border:
+                              OutlineInputBorder(borderSide: BorderSide.none),
+                          isDense: true,
+                          errorBorder:
+                              OutlineInputBorder(borderSide: BorderSide.none),
+                        ),
+                        inputBorder:
+                            OutlineInputBorder(borderSide: BorderSide.none),
+                        selectorConfig: SelectorConfig(
+                            selectorType: PhoneInputSelectorType.DIALOG),
+                      ),
+                    ),
+                    if (state.hasError)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16.0, top: 4.0),
+                        child: Text(
+                          state.errorText!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -778,7 +1229,7 @@ class _SignUpState extends State<SignUpScreen> {
                           color: Colors.black,
                           fontSize: 16,
                           fontWeight: FontWeight.w600),
-                    ),
+                    ).tr(),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(10.0),
@@ -831,1214 +1282,7 @@ class _SignUpState extends State<SignUpScreen> {
                           color: Colors.black,
                           fontSize: 16,
                           fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: <Widget>[
-                        SizedBox(
-                          width: 90,
-                          height: 90,
-                          child: _driverProofPictureURLFile == null
-                              ? Image.asset(
-                                  "assets/images/img_placeholder.png",
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.file(
-                                  _driverProofPictureURLFile!,
-                                  fit: BoxFit.cover,
-                                ),
-                        ),
-                        Positioned(
-                          left: 55,
-                          right: 0,
-                          child: FloatingActionButton(
-                            heroTag: 'driverProfileImage',
-                            backgroundColor: Color(COLOR_ACCENT),
-                            child: Icon(
-                              CupertinoIcons.camera,
-                              color: isDarkMode(context)
-                                  ? Colors.black
-                                  : Colors.white,
-                            ),
-                            mini: true,
-                            onPressed: () =>
-                                _onPickupCarProofAndDriverProof(true),
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                ],
-              )),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(right: 10.0, left: 10.0, top: 40.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(COLOR_PRIMARY),
-                padding: EdgeInsets.only(top: 12, bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25.0),
-                  side: BorderSide(
-                    color: Color(COLOR_PRIMARY),
-                  ),
-                ),
-              ),
-              child: Text(
-                'Sign Up'.tr(),
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode(context) ? Colors.black : Colors.white,
-                ),
-              ),
-              onPressed: () => _signUp(),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget formCabServiceUI() {
-    return Column(
-      children: <Widget>[
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _firstNameController,
-              cursorColor: Color(COLOR_PRIMARY),
-              textAlignVertical: TextAlignVertical.center,
-              validator: validateName,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: easyLocal.tr('First Name'),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _lastNameController,
-              validator: validateName,
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: Color(COLOR_PRIMARY),
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Last Name'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        // Row(
-        //   children: [
-        //     Expanded(
-        //       child: Row(
-        //         children: [
-        //           Radio(
-        //             value: "individual",
-        //             groupValue: companyOrNot,
-        //             onChanged: (value) {
-        //               setState(() {
-        //                 companyOrNot = value.toString();
-        //               });
-        //             },
-        //           ),
-        //           Text("As an Individual").tr()
-        //         ],
-        //       ),
-        //     ),
-        // Expanded(
-        //   child: Row(
-        //     children: [
-        //       Radio(
-        //         value: "company",
-        //         groupValue: companyOrNot,
-        //         onChanged: (value) {
-        //           setState(() {
-        //             companyOrNot = value.toString();
-        //           });
-        //         },
-        //       ),
-        //       Text("As a Company").tr()
-        //     ],
-        //   ),
-        // ),
-        //   ],
-        // ),
-        // companyOrNot == "company"
-        //     ? Column(
-        //         children: [
-        //           ConstrainedBox(
-        //             constraints: BoxConstraints(minWidth: double.infinity),
-        //             child: Padding(
-        //               padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-        //               child: TextFormField(
-        //                 controller: _companyNameController,
-        //                 validator: validateEmptyField,
-        //                 textAlignVertical: TextAlignVertical.center,
-        //                 cursorColor: Color(COLOR_PRIMARY),
-        //                 textInputAction: TextInputAction.next,
-        //                 decoration: InputDecoration(
-        //                   contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        //                   fillColor: Colors.white,
-        //                   hintText: 'Company Name'.tr(),
-        //                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-        //                   errorBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Theme.of(context).errorColor),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                   focusedErrorBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Theme.of(context).errorColor),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                   enabledBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Colors.grey.shade200),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                 ),
-        //               ),
-        //             ),
-        //           ),
-        //           ConstrainedBox(
-        //             constraints: BoxConstraints(minWidth: double.infinity),
-        //             child: Padding(
-        //               padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-        //               child: TextFormField(
-        //                 controller: _companyAddressController,
-        //                 validator: validateEmptyField,
-        //                 textAlignVertical: TextAlignVertical.center,
-        //                 cursorColor: Color(COLOR_PRIMARY),
-        //                 textInputAction: TextInputAction.next,
-        //                 maxLines: 5,
-        //                 decoration: InputDecoration(
-        //                   contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        //                   fillColor: Colors.white,
-        //                   hintText: 'Company address'.tr(),
-        //                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-        //                   errorBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Theme.of(context).errorColor),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                   focusedErrorBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Theme.of(context).errorColor),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                   enabledBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Colors.grey.shade200),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                 ),
-        //               ),
-        //             ),
-        //           ),
-        //         ],
-        //       )
-        //     : Container(),
-        //  companyOrNot == "individual" ?
-        Column(
-          children: [
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: double.infinity),
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: DropdownButtonFormField<SectionModel>(
-                    decoration: InputDecoration(
-                      contentPadding:
-                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      fillColor: Colors.white,
-                      hintText: 'Select Section'.tr(),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          borderSide: BorderSide(
-                              color: Color(COLOR_PRIMARY), width: 2.0)),
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.shade200),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                    ),
-                    validator: (value) =>
-                        value == null ? 'field required' : null,
-                    value: selectedSection,
-                    onChanged: (value) async {
-                      setState(() {
-                        selectedSection = value;
-                      });
-
-                      if (selectedSection != null) {
-                        await FireStoreUtils.getVehicleType(selectedSection!)
-                            .then((value) {
-                          setState(() {
-                            vehicleType = value;
-                          });
-                        });
-                      } else {}
-                    },
-                    hint: Text('Select Section'.tr()),
-                    items: sectionsVal!.map((SectionModel item) {
-                      return DropdownMenuItem<SectionModel>(
-                        child: Text(item.name.toString()),
-                        value: item,
-                      );
-                    }).toList()),
-              ),
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: double.infinity),
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: DropdownButtonFormField<VehicleType>(
-                    decoration: InputDecoration(
-                      contentPadding:
-                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      fillColor: Colors.white,
-                      hintText: 'Select vehicle type'.tr(),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          borderSide: BorderSide(
-                              color: Color(COLOR_PRIMARY), width: 2.0)),
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.shade200),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                    ),
-                    validator: (value) =>
-                        value == null ? 'field required' : null,
-                    value: selectedVehicleType,
-                    onChanged: (value) async {
-                      setState(() {
-                        selectedVehicleType = value;
-                      });
-                    },
-                    hint: Text('Select vehicle type'.tr()),
-                    items: vehicleType.map((VehicleType item) {
-                      return DropdownMenuItem<VehicleType>(
-                        child: Text(item.name.toString()),
-                        value: item,
-                      );
-                    }).toList()),
-              ),
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: double.infinity),
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: DropdownButtonFormField<CarMakes>(
-                    decoration: InputDecoration(
-                      contentPadding:
-                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          borderSide: BorderSide(
-                              color: Color(COLOR_PRIMARY), width: 2.0)),
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.shade200),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                    ),
-                    validator: (value) =>
-                        value == null ? 'field required'.tr() : null,
-                    value: selectedCarMakes,
-                    onChanged: (value) async {
-                      carModelList.clear();
-                      selectedCarModel = null;
-                      setState(() {
-                        selectedCarMakes = value;
-                      });
-                      await FireStoreUtils.getCarModel(
-                              context, selectedCarMakes!.name.toString())
-                          .then((value) {
-                        setState(() {
-                          carModelList = value;
-                        });
-                      });
-                    },
-                    hint: Text('Select Car Makes'.tr()),
-                    items: carMakesList.map((CarMakes item) {
-                      return DropdownMenuItem<CarMakes>(
-                        child: Text(item.name.toString()),
-                        value: item,
-                      );
-                    }).toList()),
-              ),
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: double.infinity),
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: DropdownButtonFormField<CarModel>(
-                    decoration: InputDecoration(
-                      contentPadding:
-                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          borderSide: BorderSide(
-                              color: Color(COLOR_PRIMARY), width: 2.0)),
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.shade200),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                    ),
-                    validator: (value) =>
-                        value == null ? 'field required'.tr() : null,
-                    value: selectedCarModel,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedCarModel = value;
-                      });
-                    },
-                    hint: Text('Select Car Model'.tr()),
-                    items: carModelList.map((CarModel item) {
-                      return DropdownMenuItem<CarModel>(
-                        child: Text(item.name.toString()),
-                        value: item,
-                      );
-                    }).toList()),
-              ),
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: double.infinity),
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: TextFormField(
-                  controller: _carPlateController,
-                  validator: validateEmptyField,
-                  textAlignVertical: TextAlignVertical.center,
-                  cursorColor: Color(COLOR_PRIMARY),
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    fillColor: Colors.white,
-                    hintText: 'Car Plate'.tr(),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25.0),
-                        borderSide: BorderSide(
-                            color: Color(COLOR_PRIMARY), width: 2.0)),
-                    errorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.error),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.error),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: double.infinity),
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: TextFormField(
-                  controller: _carColorController,
-                  validator: validateEmptyField,
-                  textAlignVertical: TextAlignVertical.center,
-                  cursorColor: Color(COLOR_PRIMARY),
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    fillColor: Colors.white,
-                    hintText: 'Car Color'.tr(),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25.0),
-                        borderSide: BorderSide(
-                            color: Color(COLOR_PRIMARY), width: 2.0)),
-                    errorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.error),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.error),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        //  : Container(),
-        Padding(
-          padding: EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                shape: BoxShape.rectangle,
-                border: Border.all(color: Colors.grey.shade200)),
-            child: InternationalPhoneNumberInput(
-              onInputChanged: (PhoneNumber number) =>
-                  _mobileController.text = number.phoneNumber.toString(),
-              ignoreBlank: true,
-              autoValidateMode: AutovalidateMode.onUserInteraction,
-              inputDecoration: InputDecoration(
-                hintText: 'Phone Number'.tr(),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-                isDense: true,
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              inputBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-              ),
-              selectorConfig:
-                  SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.next,
-              cursorColor: Color(COLOR_PRIMARY),
-              validator: validateEmail,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Email Address'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              obscureText: true,
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.next,
-              controller: _passwordController,
-              validator: validatePassword,
-              style: TextStyle(fontSize: 18.0),
-              cursorColor: Color(COLOR_PRIMARY),
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Password'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.done,
-              obscureText: true,
-              controller: _confirmPasswordController,
-              validator: (val) =>
-                  validateConfirmPassword(_passwordController.text, val),
-              style: TextStyle(fontSize: 18.0),
-              cursorColor: Color(COLOR_PRIMARY),
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Confirm Password'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        companyOrNot == "individual"
-            ? Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                        child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            "Pickup Car proof",
-                            style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Stack(
-                            alignment: Alignment.bottomCenter,
-                            children: <Widget>[
-                              SizedBox(
-                                width: 90,
-                                height: 90,
-                                child: _carProofPictureFile == null
-                                    ? Image.asset(
-                                        "assets/images/img_placeholder.png",
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.file(
-                                        _carProofPictureFile!,
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
-                              Positioned(
-                                left: 55,
-                                right: 0,
-                                child: FloatingActionButton(
-                                  heroTag: 'carProfileImage',
-                                  backgroundColor: Color(COLOR_ACCENT),
-                                  child: Icon(
-                                    CupertinoIcons.camera,
-                                    color: isDarkMode(context)
-                                        ? Colors.black
-                                        : Colors.white,
-                                  ),
-                                  mini: true,
-                                  onPressed: () =>
-                                      _onPickupCarProofAndDriverProof(false),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                      ],
-                    )),
-                    Expanded(
-                        child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            "Pickup Driver proof",
-                            style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Stack(
-                            alignment: Alignment.bottomCenter,
-                            children: <Widget>[
-                              SizedBox(
-                                width: 90,
-                                height: 90,
-                                child: _driverProofPictureURLFile == null
-                                    ? Image.asset(
-                                        "assets/images/img_placeholder.png",
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.file(
-                                        _driverProofPictureURLFile!,
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
-                              Positioned(
-                                left: 55,
-                                right: 0,
-                                child: FloatingActionButton(
-                                  heroTag: 'driverProfileImage',
-                                  backgroundColor: Color(COLOR_ACCENT),
-                                  child: Icon(
-                                    CupertinoIcons.camera,
-                                    color: isDarkMode(context)
-                                        ? Colors.black
-                                        : Colors.white,
-                                  ),
-                                  mini: true,
-                                  onPressed: () =>
-                                      _onPickupCarProofAndDriverProof(true),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                      ],
-                    )),
-                  ],
-                ),
-              )
-            : Container(),
-        Padding(
-          padding: const EdgeInsets.only(right: 10.0, left: 10.0, top: 40.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(COLOR_PRIMARY),
-                padding: EdgeInsets.only(top: 12, bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25.0),
-                  side: BorderSide(
-                    color: Color(COLOR_PRIMARY),
-                  ),
-                ),
-              ),
-              child: Text(
-                'Sign Up'.tr(),
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode(context) ? Colors.black : Colors.white,
-                ),
-              ),
-              onPressed: () => _signUp(),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget formParcelServiceUI() {
-    return Column(
-      children: <Widget>[
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _firstNameController,
-              cursorColor: Color(COLOR_PRIMARY),
-              textAlignVertical: TextAlignVertical.center,
-              validator: validateName,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: easyLocal.tr('First Name'),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _lastNameController,
-              validator: validateName,
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: Color(COLOR_PRIMARY),
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Last Name'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _carNameController,
-              validator: validateEmptyField,
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: Color(COLOR_PRIMARY),
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Car Model'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _carPlateController,
-              validator: validateEmptyField,
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: Color(COLOR_PRIMARY),
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Car Plate'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                shape: BoxShape.rectangle,
-                border: Border.all(color: Colors.grey.shade200)),
-            child: InternationalPhoneNumberInput(
-              onInputChanged: (PhoneNumber number) =>
-                  _mobileController.text = number.phoneNumber.toString(),
-              ignoreBlank: true,
-              autoValidateMode: AutovalidateMode.onUserInteraction,
-              inputDecoration: InputDecoration(
-                hintText: 'Phone Number'.tr(),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-                isDense: true,
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              inputBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-              ),
-              selectorConfig:
-                  SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.next,
-              cursorColor: Color(COLOR_PRIMARY),
-              validator: validateEmail,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Email Address'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              obscureText: true,
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.next,
-              controller: _passwordController,
-              validator: validatePassword,
-              style: TextStyle(fontSize: 18.0),
-              cursorColor: Color(COLOR_PRIMARY),
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Password'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.done,
-              obscureText: true,
-              controller: _confirmPasswordController,
-              validator: (val) =>
-                  validateConfirmPassword(_passwordController.text, val),
-              style: TextStyle(fontSize: 18.0),
-              cursorColor: Color(COLOR_PRIMARY),
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Confirm Password'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 20),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                  child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      "Pickup Car proof",
-                      style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: <Widget>[
-                        SizedBox(
-                          width: 90,
-                          height: 90,
-                          child: _carProofPictureFile == null
-                              ? Image.asset(
-                                  "assets/images/img_placeholder.png",
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.file(
-                                  _carProofPictureFile!,
-                                  fit: BoxFit.cover,
-                                ),
-                        ),
-                        Positioned(
-                          left: 55,
-                          right: 0,
-                          child: FloatingActionButton(
-                            heroTag: 'carProfileImage',
-                            backgroundColor: Color(COLOR_ACCENT),
-                            child: Icon(
-                              CupertinoIcons.camera,
-                              color: isDarkMode(context)
-                                  ? Colors.black
-                                  : Colors.white,
-                            ),
-                            mini: true,
-                            onPressed: () =>
-                                _onPickupCarProofAndDriverProof(false),
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                ],
-              )),
-              Expanded(
-                  child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      "Pickup Driver proof",
-                      style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600),
-                    ),
+                    ).tr(),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(10.0),
@@ -2116,669 +1360,23 @@ class _SignUpState extends State<SignUpScreen> {
 
   String? companyOrNot = "individual";
 
-  Widget formRentalServiceUI() {
-    return Column(
-      children: <Widget>[
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _firstNameController,
-              cursorColor: Color(COLOR_PRIMARY),
-              textAlignVertical: TextAlignVertical.center,
-              validator: validateName,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: easyLocal.tr('First Name'),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _lastNameController,
-              validator: validateName,
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: Color(COLOR_PRIMARY),
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Last Name'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        // Row(
-        //   children: [
-        //     Expanded(
-        //       child: Row(
-        //         children: [
-        //           Radio(
-        //             value: "individual",
-        //             groupValue: companyOrNot,
-        //             onChanged: (value) {
-        //               setState(() {
-        //                 companyOrNot = value.toString();
-        //               });
-        //             },
-        //           ),
-        //           Text("As an Individual").tr()
-        //         ],
-        //       ),
-        //     ),
-        // Expanded(
-        //   child: Row(
-        //     children: [
-        //       Radio(
-        //         value: "company",
-        //         groupValue: companyOrNot,
-        //         onChanged: (value) {
-        //           setState(() {
-        //             companyOrNot = value.toString();
-        //           });
-        //         },
-        //       ),
-        //       Text("As a Company").tr()
-        //     ],
-        //   ),
-        // ),
-        // ],
-        //  ),
-        // companyOrNot == "company"
-        //     ? Column(
-        //         children: [
-        //           ConstrainedBox(
-        //             constraints: BoxConstraints(minWidth: double.infinity),
-        //             child: Padding(
-        //               padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-        //               child: TextFormField(
-        //                 controller: _companyNameController,
-        //                 validator: validateEmptyField,
-        //                 textAlignVertical: TextAlignVertical.center,
-        //                 cursorColor: Color(COLOR_PRIMARY),
-        //                 textInputAction: TextInputAction.next,
-        //                 decoration: InputDecoration(
-        //                   contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        //                   fillColor: Colors.white,
-        //                   hintText: 'Company Name'.tr(),
-        //                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-        //                   errorBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Theme.of(context).errorColor),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                   focusedErrorBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Theme.of(context).errorColor),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                   enabledBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Colors.grey.shade200),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                 ),
-        //               ),
-        //             ),
-        //           ),
-        //           ConstrainedBox(
-        //             constraints: BoxConstraints(minWidth: double.infinity),
-        //             child: Padding(
-        //               padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-        //               child: TextFormField(
-        //                 controller: _companyAddressController,
-        //                 validator: validateEmptyField,
-        //                 textAlignVertical: TextAlignVertical.center,
-        //                 cursorColor: Color(COLOR_PRIMARY),
-        //                 textInputAction: TextInputAction.next,
-        //                 maxLines: 5,
-        //                 decoration: InputDecoration(
-        //                   contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        //                   fillColor: Colors.white,
-        //                   hintText: 'Company address'.tr(),
-        //                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-        //                   errorBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Theme.of(context).errorColor),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                   focusedErrorBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Theme.of(context).errorColor),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                   enabledBorder: OutlineInputBorder(
-        //                     borderSide: BorderSide(color: Colors.grey.shade200),
-        //                     borderRadius: BorderRadius.circular(25.0),
-        //                   ),
-        //                 ),
-        //               ),
-        //             ),
-        //           ),
-        //         ],
-        //       )
-        //      :
-        Column(
-          children: [
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: double.infinity),
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: DropdownButtonFormField<VehicleType>(
-                    decoration: InputDecoration(
-                      contentPadding:
-                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      fillColor: Colors.white,
-                      hintText: 'Select vehicle type'.tr(),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          borderSide: BorderSide(
-                              color: Color(COLOR_PRIMARY), width: 2.0)),
-                      errorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.error),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.shade200),
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                    ),
-                    validator: (value) =>
-                        value == null ? 'field required'.tr() : null,
-                    value: selectedRentalVehicleType,
-                    onChanged: (value) async {
-                      setState(() {
-                        selectedRentalVehicleType = value;
-                      });
-                    },
-                    hint: Text('Select vehicle type'.tr()),
-                    items: rentalVehicleType.map((VehicleType item) {
-                      return DropdownMenuItem<VehicleType>(
-                        child: Text(item.name.toString()),
-                        value: item,
-                      );
-                    }).toList()),
-              ),
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: double.infinity),
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: TextFormField(
-                  controller: _carNameController,
-                  validator: validateEmptyField,
-                  textAlignVertical: TextAlignVertical.center,
-                  cursorColor: Color(COLOR_PRIMARY),
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    fillColor: Colors.white,
-                    hintText: 'Car Model'.tr(),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25.0),
-                        borderSide: BorderSide(
-                            color: Color(COLOR_PRIMARY), width: 2.0)),
-                    errorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.error),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.error),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: double.infinity),
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                child: TextFormField(
-                  controller: _carPlateController,
-                  validator: validateEmptyField,
-                  textAlignVertical: TextAlignVertical.center,
-                  cursorColor: Color(COLOR_PRIMARY),
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    fillColor: Colors.white,
-                    hintText: 'Car Plate'.tr(),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25.0),
-                        borderSide: BorderSide(
-                            color: Color(COLOR_PRIMARY), width: 2.0)),
-                    errorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.error),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.error),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(25.0),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        Padding(
-          padding: EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                shape: BoxShape.rectangle,
-                border: Border.all(color: Colors.grey.shade200)),
-            child: InternationalPhoneNumberInput(
-              onInputChanged: (PhoneNumber number) =>
-                  _mobileController.text = number.phoneNumber.toString(),
-              ignoreBlank: true,
-              autoValidateMode: AutovalidateMode.onUserInteraction,
-              inputDecoration: InputDecoration(
-                hintText: 'Phone Number'.tr(),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-                isDense: true,
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              inputBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-              ),
-              selectorConfig:
-                  SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.next,
-              cursorColor: Color(COLOR_PRIMARY),
-              validator: validateEmail,
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Email Address'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              obscureText: true,
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.next,
-              controller: _passwordController,
-              validator: validatePassword,
-              style: TextStyle(fontSize: 18.0),
-              cursorColor: Color(COLOR_PRIMARY),
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Password'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.done,
-              obscureText: true,
-              controller: _confirmPasswordController,
-              validator: (val) =>
-                  validateConfirmPassword(_passwordController.text, val),
-              style: TextStyle(fontSize: 18.0),
-              cursorColor: Color(COLOR_PRIMARY),
-              decoration: InputDecoration(
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Confirm Password'.tr(),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide:
-                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        companyOrNot == "individual"
-            ? Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                        child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            "Pickup vehicle proof",
-                            style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Stack(
-                            alignment: Alignment.bottomCenter,
-                            children: <Widget>[
-                              SizedBox(
-                                width: 90,
-                                height: 90,
-                                child: _carProofPictureFile == null
-                                    ? Image.asset(
-                                        "assets/images/img_placeholder.png",
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.file(
-                                        _carProofPictureFile!,
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
-                              Positioned(
-                                left: 55,
-                                right: 0,
-                                child: FloatingActionButton(
-                                  heroTag: 'carProfileImage',
-                                  backgroundColor: Color(COLOR_ACCENT),
-                                  child: Icon(
-                                    CupertinoIcons.camera,
-                                    color: isDarkMode(context)
-                                        ? Colors.black
-                                        : Colors.white,
-                                  ),
-                                  mini: true,
-                                  onPressed: () =>
-                                      _onPickupCarProofAndDriverProof(false),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                      ],
-                    )),
-                    Expanded(
-                        child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            "Pickup Driver proof",
-                            style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Stack(
-                            alignment: Alignment.bottomCenter,
-                            children: <Widget>[
-                              SizedBox(
-                                width: 90,
-                                height: 90,
-                                child: _driverProofPictureURLFile == null
-                                    ? Image.asset(
-                                        "assets/images/img_placeholder.png",
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.file(
-                                        _driverProofPictureURLFile!,
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
-                              Positioned(
-                                left: 55,
-                                right: 0,
-                                child: FloatingActionButton(
-                                  heroTag: 'driverProfileImage',
-                                  backgroundColor: Color(COLOR_ACCENT),
-                                  child: Icon(
-                                    CupertinoIcons.camera,
-                                    color: isDarkMode(context)
-                                        ? Colors.black
-                                        : Colors.white,
-                                  ),
-                                  mini: true,
-                                  onPressed: () =>
-                                      _onPickupCarProofAndDriverProof(true),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                      ],
-                    )),
-                  ],
-                ),
-              )
-            : Container(),
-        Padding(
-          padding: const EdgeInsets.only(right: 10.0, left: 10.0, top: 40.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(COLOR_PRIMARY),
-                padding: EdgeInsets.only(top: 12, bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25.0),
-                  side: BorderSide(
-                    color: Color(COLOR_PRIMARY),
-                  ),
-                ),
-              ),
-              child: Text(
-                'Sign Up'.tr(),
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode(context) ? Colors.black : Colors.white,
-                ),
-              ),
-              onPressed: () => _signUp(),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   /// if the fields are validated and location is enabled we create a new user
   /// and navigate to [ContainerScreen] else we show error
   _signUp() async {
-    if (_mobileController.text.isNotEmpty) {
-      if (_selectedServiceType == "Delivery service") {
-        if (_deliveryKey.currentState?.validate() ?? false) {
-          _deliveryKey.currentState!.save();
-          await _signUpWithEmailAndPasswordInDeliveryService();
-        } else {
-          setState(() {
-            _validate = AutovalidateMode.onUserInteraction;
-          });
-        }
-      } else if (_selectedServiceType == "Parcel service") {
-        print("---->1");
-        if (_parcelServiceKey.currentState?.validate() ?? false) {
-          _parcelServiceKey.currentState!.save();
-          await _signUpWithEmailAndPasswordInParcelService();
-        } else {
-          print("---->2");
-          setState(() {
-            _validate = AutovalidateMode.onUserInteraction;
-          });
-        }
-      } else if (_selectedServiceType == "Rental Service") {
-        if (_rentalServiceKey.currentState?.validate() ?? false) {
-          _rentalServiceKey.currentState!.save();
-          await _signUpWithEmailAndPasswordInRentalService();
-        } else {
-          setState(() {
-            _validate = AutovalidateMode.onUserInteraction;
-          });
-        }
-      } else {
-        if (_cabServiceKey.currentState?.validate() ?? false) {
-          _cabServiceKey.currentState!.save();
-          await _signUpWithEmailAndPasswordInCabService();
-        } else {
-          setState(() {
-            _validate = AutovalidateMode.onUserInteraction;
-          });
-        }
-      }
+    if (_deliveryKey.currentState?.validate() ?? false) {
+      _deliveryKey.currentState!.save();
+
+      await _signUpWithEmailAndPasswordInDeliveryService();
     } else {
-      final snack = SnackBar(
-        content: Text(
-          'Phone number is Empty'.tr(),
-          style: TextStyle(color: Colors.white),
-        ),
-        duration: Duration(seconds: 2),
-        backgroundColor: Colors.red,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(snack);
+      setState(() {
+        _validate = AutovalidateMode.onUserInteraction;
+        print("Validation failed, activating automatic validation");
+      });
     }
   }
 
   void _showActivationPendingAlert(BuildContext parentContext) {
-    print('Exibindo alerta de ativação pendente...');
+    print('Showing activation pending alert...');
     showDialog(
       context: parentContext,
       barrierDismissible: false,
@@ -2794,13 +1392,13 @@ class _SignUpState extends State<SignUpScreen> {
               child: Text('OK'.tr()),
               onPressed: () {
                 try {
-                  print('Clicou em OK, fechando diálogo...');
+                  print('Clicked OK, closing dialog...');
                   Navigator.of(dialogContext).pop(); // Fecha o diálogo
-                  print('Diálogo fechado, redirecionando para AuthScreen...');
+                  print('Dialog closed, redirecting to AuthScreen...');
                   pushAndRemoveUntil(parentContext, AuthScreen(), false);
-                  print('Navegação concluída com sucesso.');
+                  print('Navigation completed successfully.');
                 } catch (e, stackTrace) {
-                  print('Erro ao redirecionar: $e');
+                  print('Error redirecting: $e');
                   print('StackTrace: $stackTrace');
                   ScaffoldMessenger.of(parentContext).showSnackBar(
                     SnackBar(
@@ -2815,14 +1413,14 @@ class _SignUpState extends State<SignUpScreen> {
         );
       },
     ).catchError((e, stackTrace) {
-      print('Erro ao exibir diálogo: $e');
+      print('Error displaying dialog: $e');
       print('StackTrace: $stackTrace');
     });
   }
 
   _signUpWithEmailAndPasswordInDeliveryService() async {
-    await showProgress(
-        context, 'Creating new account, Please wait...'.tr(), false);
+    await ShowToastDialog.showLoader('Creating new account, Please wait...');
+
     dynamic result = await FireStoreUtils.firebaseSignUpWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text.trim(),
@@ -2830,13 +1428,15 @@ class _SignUpState extends State<SignUpScreen> {
         _carImage,
         _driverProofPictureURLFile,
         _carProofPictureFile,
+        _vehicleController.text,
         _carNameController.text,
+        _carMakeController.text,
         _carPlateController.text,
         _firstNameController.text,
         _lastNameController.text,
         _mobileController.text,
         "delivery-service");
-    await hideProgress();
+    await ShowToastDialog.closeLoader();
     if (result != null && result is User) {
       MyAppState.currentUser = result;
       MyAppState.currentUser!.isActive = false;
@@ -2854,8 +1454,7 @@ class _SignUpState extends State<SignUpScreen> {
   }
 
   _signUpWithEmailAndPasswordInRentalService() async {
-    await showProgress(
-        context, 'Creating new account, Please wait...'.tr(), false);
+    await ShowToastDialog.showLoader('Creating new account, Please wait...');
     dynamic result =
         await FireStoreUtils.firebaseSignUpWithEmailAndPasswordRentalService(
             _emailController.text.trim(),
@@ -2876,39 +1475,7 @@ class _SignUpState extends State<SignUpScreen> {
             companyOrNot.toString(),
             _companyNameController.text,
             _companyAddressController.text);
-    await hideProgress();
-    if (result != null && result is User) {
-      MyAppState.currentUser = result;
-      MyAppState.currentUser!.isActive = false;
-      MyAppState.currentUser!.lastOnlineTimestamp = Timestamp.now();
-      await FireStoreUtils.updateCurrentUser(MyAppState.currentUser!);
-      await auth.FirebaseAuth.instance.signOut();
-      MyAppState.currentUser = null;
-      pushAndRemoveUntil(context, AuthScreen(), false);
-    } else if (result != null && result is String) {
-      showAlertDialog(context, 'Failed'.tr(), result, true);
-    } else {
-      showAlertDialog(context, 'Failed'.tr(), "Couldn't sign up".tr(), true);
-    }
-  }
-
-  _signUpWithEmailAndPasswordInParcelService() async {
-    await showProgress(
-        context, 'Creating new account, Please wait...'.tr(), false);
-    dynamic result = await FireStoreUtils.firebaseSignUpWithEmailAndPassword(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-        _image,
-        _carImage,
-        _driverProofPictureURLFile,
-        _carProofPictureFile,
-        _carNameController.text,
-        _carPlateController.text,
-        _firstNameController.text,
-        _lastNameController.text,
-        _mobileController.text,
-        "parcel_delivery");
-    await hideProgress();
+    await ShowToastDialog.closeLoader();
     if (result != null && result is User) {
       MyAppState.currentUser = result;
       MyAppState.currentUser!.isActive = false;
@@ -2925,8 +1492,7 @@ class _SignUpState extends State<SignUpScreen> {
   }
 
   _signUpWithEmailAndPasswordInCabService() async {
-    await showProgress(
-        context, 'Creating new account, Please wait...'.tr(), false);
+    await ShowToastDialog.showLoader('Creating new account, Please wait...');
     dynamic result =
         await FireStoreUtils.firebaseSignUpWithEmailAndPasswordCabService(
             _emailController.text.trim(),
@@ -2953,7 +1519,7 @@ class _SignUpState extends State<SignUpScreen> {
             selectedVehicleType != null
                 ? selectedVehicleType!.id.toString()
                 : "");
-    await hideProgress();
+    await ShowToastDialog.closeLoader();
     if (result != null && result is User) {
       MyAppState.currentUser = result;
       MyAppState.currentUser!.isActive = false;
@@ -2971,6 +1537,7 @@ class _SignUpState extends State<SignUpScreen> {
 
   @override
   void dispose() {
+    _autoReloadTimer?.cancel();
     _passwordController.dispose();
     _image = null;
     _carImage = null;

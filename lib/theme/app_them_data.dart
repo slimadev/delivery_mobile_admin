@@ -40,10 +40,9 @@ class AppThemeData {
   static const Color success100 = Color(0xFFA1FFD9);
   static const Color success200 = Color(0xFF5DFFBE);
   static const Color success300 = Color(0xFF19FFA3);
-  static  Color success400 = Color(0xFF10B271);
+  static Color success400 = Color(0xFF10B271);
   static const Color success500 = Color(0xFF086640);
   static const Color success600 = Color(0xFF001A0F);
-
 
   static const Color warning50 = Color(0xFFFFF8E5);
   static const Color warning100 = Color(0xFFFFE9AB);
@@ -52,7 +51,6 @@ class AppThemeData {
   static const Color warning400 = Color(0xFFB28D26);
   static const Color warning500 = Color(0xFF665013);
   static const Color warning600 = Color(0xFF191200);
-
 
   static const Color grey50 = Color(0xFFFFFFFF);
   static const Color grey100 = Color(0xFFF3F4F6);
@@ -65,9 +63,17 @@ class AppThemeData {
   static const Color grey800 = Color(0xFF1F2937);
   static const Color grey900 = Color(0xFF111827);
 
+  static const Color grey = Color(0xFFA09F9F);
+  static const Color lightgrey = Color(0xFFE6E6E6);
+  static const Color green = Color(0xFF82C100);
+  static const Color black = Color(0xFF000000);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color newBlack = Color(0xFF333333);
 
-  static const String regular = 'RadioCanadaBig-Regular';
-  static const String medium = 'RadioCanadaBig-Medium';
-  static const String bold = 'RadioCanadaBig-Bold';
-  static const String semiBold = 'RadioCanadaBig-SemiBold';
+  static const String regular = 'Roboto-Regular';
+  static const String medium = 'Roboto-Medium';
+  static const String bold = 'Roboto-Bold';
+  static const String semiBold = 'Roboto-Black';
+  static const String light = 'Roboto-Light';
+  static const String thin = 'Roboto-Thin';
 }

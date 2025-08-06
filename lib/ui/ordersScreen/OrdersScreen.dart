@@ -6,8 +6,12 @@ import 'package:emartdriver/model/OrderModel.dart';
 import 'package:emartdriver/model/ProductModel.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
+import 'package:emartdriver/theme/app_them_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:emartdriver/ui/coleta/ColetaScreen.dart';
+import 'package:emartdriver/ui/entrega/EntregaScreen.dart';
+import 'package:emartdriver/ui/entrega/DeliverySuccessScreen.dart';
 
 class OrdersScreen extends StatefulWidget {
   @override
@@ -22,13 +26,57 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   void initState() {
     super.initState();
-    print("------>${ordersList.length}");
-    ordersFuture = _fireStoreUtils.getDriverOrders(MyAppState.currentUser!.userID);
+    ordersFuture =
+        _fireStoreUtils.getDriverOrders(MyAppState.currentUser!.userID);
+  }
+
+  Color getStatusColor(String status) {
+    switch (status) {
+      case 'aceito':
+      case ORDER_STATUS_DRIVER_ACCEPTED:
+        return Colors.orange;
+      case 'em_andamento':
+      case ORDER_STATUS_DRIVER_ARRIVED_AT_STORE:
+        return const Color.fromARGB(255, 57, 61, 65);
+      case 'entregue':
+      case ORDER_STATUS_DRIVER_DELIVERED:
+        return Colors.green;
+      case ORDER_STATUS_DRIVER_PICKED_UP:
+        return Colors.yellowAccent;
+      case 'cancelado':
+      case 'cancelled':
+        return Colors.red;
+      case ORDER_STATUS_DRIVER_ARRIVED:
+        return AppThemeData.newBlack;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  bool isOrderActionable(String status) {
+    // Ajuste conforme seus status de ação
+    return status.toLowerCase() == 'aceito' ||
+        status.toLowerCase() == 'accepted' ||
+        status.toLowerCase() == 'em_andamento' ||
+        status.toLowerCase() == 'in_progress';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: Text('My Orders',
+              style:
+                  TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          centerTitle: true,
+          iconTheme: IconThemeData(color: Colors.black),
+          automaticallyImplyLeading: true,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios, color: Colors.black),
+            onPressed: () => Navigator.of(context).pop(),
+          )),
       body: FutureBuilder<List<OrderModel>>(
           future: ordersFuture,
           initialData: [],
@@ -45,173 +93,163 @@ class _OrdersScreenState extends State<OrdersScreen> {
               );
             if (!snapshot.hasData || (snapshot.data?.isEmpty ?? true)) {
               return Center(
-                child: showEmptyState('No Previous Orders'.tr(), description: "Let's deliver food!".tr()),
+                child: showEmptyState('No Previous Orders'.tr(),
+                    description: "Let's deliver food!".tr()),
               );
             } else {
               ordersList = snapshot.data!;
-              return ListView.builder(itemCount: ordersList.length, padding: const EdgeInsets.all(12), itemBuilder: (context, index) => buildOrderItem(ordersList[index]));
+              return ListView.builder(
+                  itemCount: ordersList.length,
+                  padding: const EdgeInsets.all(12),
+                  itemBuilder: (context, index) =>
+                      buildOrderItem(ordersList[index]));
             }
           }),
     );
   }
 
   Widget buildOrderItem(OrderModel orderModel) {
-    double total = 0.0;
-    total = 0.0;
-    String extrasDisVal = '';
-    orderModel.products.forEach((element) {
-      total += element.quantity * double.parse(element.price);
-
-      for (int i = 0; i < element.extras.length; i++) {
-        extrasDisVal += '${element.extras[i].toString().replaceAll("\"", "")} ${(i == element.extras.length - 1) ? "" : ","}';
-      }
-    });
-
-    print("id is ${orderModel.id}");
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Container(
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(2),
-            border: Border.all(color: Colors.grey.shade100, width: 0.1),
-            boxShadow: [
-              BoxShadow(color: Colors.grey.shade200, blurRadius: 2.0, spreadRadius: 0.4, offset: Offset(0.2, 0.2)),
+    final bool isActive = isOrderActionable(orderModel.status);
+    return InkWell(
+      onTap: MyAppState.currentUser!.active
+          ? () {
+              switch (orderModel.driver_status) {
+                case ORDER_STATUS_DRIVER_ACCEPTED:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ColetaScreen(
+                        order: orderModel,
+                        vendor: orderModel.vendor,
+                        customer: orderModel.author,
+                        orderNumber: orderModel.orderNumber,
+                        arrivedAtPickup: false,
+                      ),
+                    ),
+                  );
+                  break;
+                case ORDER_STATUS_DRIVER_ARRIVED_AT_STORE:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ColetaScreen(
+                        order: orderModel,
+                        vendor: orderModel.vendor,
+                        customer: orderModel.author,
+                        orderNumber: orderModel.orderNumber,
+                        arrivedAtPickup: true,
+                      ),
+                    ),
+                  );
+                  break;
+                case ORDER_STATUS_DRIVER_PICKED_UP:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DeliveryScreen(
+                        order: orderModel,
+                        vendor: orderModel.vendor,
+                        orderNumber: orderModel.orderNumber,
+                      ),
+                    ),
+                  );
+                  break;
+                case ORDER_STATUS_DRIVER_DELIVERED:
+                  // Navigator.push(
+                  //   context,
+                  //   // MaterialPageRoute(
+                  //   //   builder: (_) => DeliverySuccessScreen(order: orderModel,
+                  //   //   earnings: orderModel.deliveryCharge ?? ,
+                  //   //   bonus: orderModel.adminCommission,
+                  //   //   to),
+                  //   // ),
+                  // );
+                  break;
+                case ORDER_STATUS_DRIVER_ARRIVED:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DeliveryScreen(
+                        order: orderModel,
+                        vendor: orderModel.vendor,
+                        orderNumber: orderModel.orderNumber ?? 1,
+                        arrived: true,
+                      ),
+                    ),
+                  );
+                  break;
+                default:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => OrderDetailScreen(order: orderModel),
+                    ),
+                  );
+              }
+            }
+          : null,
+      child: Card(
+        margin: EdgeInsets.symmetric(vertical: 8),
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(14.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Loja origem
+              Row(
+                children: [
+                  Icon(Icons.store, color: Colors.green),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      orderModel.vendor.title,
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 6),
+              // Endereço de entrega
+              Row(
+                children: [
+                  Icon(Icons.location_on, color: Colors.red),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      orderModel.address.locality ?? '',
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 6),
+              // Delivery charge e status
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Entrega: ' +
+                        amountShow(
+                            amount: orderModel.deliveryCharge.toString()),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  Chip(
+                    label: Text(orderModel.driver_status,
+                        style: TextStyle(color: Colors.white)),
+                    backgroundColor: getStatusColor(orderModel.driver_status),
+                  ),
+                ],
+              ),
+              SizedBox(height: 6),
+              // Data/hora
+              Text(
+                'Data: ' + orderDate(orderModel.createdAt),
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
             ],
-            color: Colors.white),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.all(Radius.circular(10)),
-              child: Container(
-                height: 140,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(orderModel.products.first.photo),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.5), BlendMode.darken),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    '${orderDate(orderModel.createdAt)} - ${orderModel.status}',
-                    style: TextStyle(color: Colors.white, fontSize: 17),
-                  ),
-                ),
-              ),
-            ),
-            ListView.builder(
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: orderModel.products.length,
-                padding: EdgeInsets.only(),
-                shrinkWrap: true,
-                itemBuilder: (context, index) {
-                  ProductModel product = orderModel.products[index];
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                        minLeadingWidth: 10,
-                        contentPadding: EdgeInsets.only(left: 10, right: 10),
-                        visualDensity: VisualDensity(horizontal: 0, vertical: -4),
-                        leading: CircleAvatar(
-                          radius: 13,
-                          backgroundColor: Color(COLOR_PRIMARY),
-                          child: Text(
-                            '${product.quantity}',
-                            style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        title: Text(
-                          product.name,
-                          style: TextStyle(color: isDarkMode(context) ? Colors.black : Color(0XFF333333), fontSize: 18, letterSpacing: 0.5, fontFamily: 'Poppinsr'),
-                        ),
-                        trailing: Text(
-                          amountShow(
-                              amount: double.parse((product.extras_price!.isNotEmpty && double.parse(product.extras_price!) != 0.0)
-                                      ? (double.parse(product.extras_price!) + double.parse(product.price)).toString()
-                                      : product.price)
-                                  .toString()),
-                          style: TextStyle(color: isDarkMode(context) ? Colors.grey.shade200 : Color(0XFF333333), fontSize: 17, letterSpacing: 0.5, fontFamily: 'Poppinssm'),
-                        ),
-                      ),
-                      product.variant_info != null && product.variant_info!.variant_options != null
-                          ? Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 15),
-                              child: Wrap(
-                                spacing: 6.0,
-                                runSpacing: 6.0,
-                                children: List.generate(
-                                  product.variant_info!.variant_options!.length,
-                                  (i) {
-                                    return _buildChip(
-                                        "${product.variant_info!.variant_options!.keys.elementAt(i)} : ${product.variant_info!.variant_options![product.variant_info.variant_options!.keys.elementAt(i)]}",
-                                        i);
-                                  },
-                                ).toList(),
-                              ),
-                            )
-                          : Container(),
-                      SizedBox(
-                        height: 10,
-                      ),
-                      Container(
-                        margin: EdgeInsets.only(left: 20, right: 10),
-                        child: extrasDisVal.isEmpty
-                            ? Container()
-                            : Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  extrasDisVal,
-                                  style: TextStyle(fontSize: 16, color: Colors.grey, fontFamily: 'Poppinsr'),
-                                ),
-                              ),
-                      ),
-                    ],
-                  );
-                }),
-            ListView.builder(
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: orderModel.products.length,
-                shrinkWrap: true,
-                itemBuilder: (context, index) {
-                  ProductModel product = orderModel.products[index];
-                  return ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.all(Radius.circular(4)),
-                        border: Border.all(color: Color(COLOR_PRIMARY)),
-                      ),
-                      child: Text(
-                        '${product.quantity}',
-                        style: TextStyle(color: Color(COLOR_PRIMARY), fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    title: Text(
-                      product.name,
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-                    ),
-                    trailing: Text(
-                      amountShow(amount: product.price),
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-                    ),
-                  );
-                }),
-            Divider(),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              child: Center(
-                child: Text(
-                  'Total : '.tr() + amountShow(amount: total.toString()),
-                  style: TextStyle(color: Color(COLOR_PRIMARY), fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 10,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -221,7 +259,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
   bool isPlaying = false;
 
   playSound() async {
-    final path = await rootBundle.load("assets/audio/mixkit-happy-bells-notification-937.mp3");
+    final path = await rootBundle
+        .load("assets/audio/mixkit-happy-bells-notification-937.mp3");
 
     audioPlayer.setSourceBytes(path.buffer.asUint8List());
     audioPlayer.setReleaseMode(ReleaseMode.loop);
@@ -229,15 +268,55 @@ class _OrdersScreenState extends State<OrdersScreen> {
     audioPlayer.play(BytesSource(path.buffer.asUint8List()),
         volume: 15,
         ctx: AudioContext(
-            android:
-                AudioContextAndroid(contentType: AndroidContentType.music, isSpeakerphoneOn: true, stayAwake: true, usageType: AndroidUsageType.alarm, audioFocus: AndroidAudioFocus.gainTransient),
+            android: AudioContextAndroid(
+                contentType: AndroidContentType.music,
+                isSpeakerphoneOn: true,
+                stayAwake: true,
+                usageType: AndroidUsageType.alarm,
+                audioFocus: AndroidAudioFocus.gainTransient),
             iOS: AudioContextIOS(category: AVAudioSessionCategory.playback)));
+  }
+}
+
+// Placeholder para tela de detalhes do pedido
+class OrderDetailScreen extends StatelessWidget {
+  final OrderModel order;
+  const OrderDetailScreen({Key? key, required this.order}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Detalhes do Pedido'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Loja: ${order.vendor.title}',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text('Endereço de entrega: ${order.address.locality ?? ''}'),
+            SizedBox(height: 8),
+            Text('Valor da entrega: ' +
+                amountShow(amount: order.deliveryCharge.toString())),
+            SizedBox(height: 8),
+            Text('Status: ${order.driver_status}'),
+            SizedBox(height: 8),
+            Text('Data: ' + orderDate(order.createdAt)),
+            // Adicione mais detalhes relevantes se necessário
+          ],
+        ),
+      ),
+    );
   }
 }
 
 Widget _buildChip(String label, int attributesOptionIndex) {
   return Container(
-    decoration: BoxDecoration(color: const Color(0xffEEEDED), borderRadius: BorderRadius.circular(4)),
+    decoration: BoxDecoration(
+        color: const Color(0xffEEEDED), borderRadius: BorderRadius.circular(4)),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       child: Text(

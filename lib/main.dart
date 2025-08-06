@@ -26,8 +26,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 
 import 'model/User.dart';
+
+final GlobalKey<NavigatorState> navigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'Main Navigator');
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
@@ -35,14 +39,22 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
 }
 
+void onStart(ServiceInstance service) {
+  Timer.periodic(Duration(minutes: 1), (timer) async {
+    // await updateCurrentLocation();
+  });
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+        name: 'emart', options: DefaultFirebaseOptions.currentPlatform);
+  }
   await FirebaseAppCheck.instance.activate(
-    webProvider: ReCaptchaV3Provider('recaptcha-v3-site-key'),
-    androidProvider: AndroidProvider.playIntegrity,
-    appleProvider: AppleProvider.appAttest,
+    androidProvider: AndroidProvider.debug,
+    appleProvider: AppleProvider.deviceCheck,
   );
   await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
     alert: true,
@@ -63,13 +75,14 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   SharedPreferences sp = await SharedPreferences.getInstance();
   await UserPreference.init();
+  // await FlutterBackgroundService.initialize(onStart);
   runApp(
     EasyLocalization(
-        supportedLocales: const [Locale('en'), Locale('ar')],
+        supportedLocales: const [Locale('en'), Locale('ar'), Locale('pt')],
         path: 'assets/translations',
         fallbackLocale: sp.getString('languageCode') != null
             ? Locale(sp.getString('languageCode')!)
-            : Locale('en'),
+            : Locale('pt'),
         saveLocale: true,
         useOnlyLangCode: true,
         useFallbackTranslations: true,
@@ -83,11 +96,6 @@ class MyApp extends StatefulWidget {
 }
 
 class MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  /// this key is used to navigate to the appropriate screen when the
-  /// notification is clicked from the system tray
-  final GlobalKey<NavigatorState> navigatorKey =
-      GlobalKey(debugLabel: 'Main Navigator');
-
   static User? currentUser;
 
   NotificationService notificationService = NotificationService();
@@ -118,8 +126,8 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
           .then((value) {
         AppThemeData.success400 = Color(int.parse(
             value.data()!['app_driver_color'].replaceFirst("#", "0xff")));
-        COLOR_PRIMARY = int.parse(
-            value.data()!['app_driver_color'].replaceFirst("#", "0xff"));
+        // COLOR_PRIMARY = int.parse(
+        //     value.data()!['app_driver_color'].replaceFirst("#", "0xff"));
       });
 
       await FirebaseFirestore.instance
@@ -173,11 +181,11 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         } else {
           currencyData = CurrencyModel(
               id: "",
-              code: "USD",
+              code: "MZN",
               decimal: 2,
               isactive: true,
-              name: "US Dollar",
-              symbol: "\$",
+              name: "Metical",
+              symbol: "MT",
               symbolatright: false);
         }
       });
@@ -201,11 +209,11 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        navigatorKey: notificationService.navigatorKey,
+        navigatorKey: navigatorKey,
         localizationsDelegates: context.localizationDelegates,
         supportedLocales: context.supportedLocales,
         locale: context.locale,
-        title: 'eMart Driver'.tr(),
+        title: 'Kai'.tr(),
         builder: EasyLoading.init(),
         theme: ThemeData(
             appBarTheme: AppBarTheme(
@@ -226,7 +234,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
                     TextTheme(titleLarge: TextStyle(color: Colors.black, fontSize: 17.0, letterSpacing: 0, fontWeight: FontWeight.w700))
                         .titleLarge),
             bottomSheetTheme:
-                BottomSheetThemeData(backgroundColor: Colors.white),
+                BottomSheetThemeData(backgroundColor: Colors.black),
             primaryColor: Color(COLOR_PRIMARY),
             brightness: Brightness.light),
         darkTheme: ThemeData(

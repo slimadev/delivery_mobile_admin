@@ -30,6 +30,10 @@ class UserPreference {
     _preferences.setString(_userId, userID);
   }
 
+  static String? getUserId() {
+    return _preferences.getString(_userId);
+  }
+
   static String walletKey = "walletKey";
 
   static setWalletData(bool isEnable) async {
@@ -60,7 +64,8 @@ class UserPreference {
 
   static getPayPalData() {
     final String? jsonData = _preferences.getString(paypalKey);
-    if (jsonData != null) return PaypalSettingData.fromJson((jsonDecode(jsonData)));
+    if (jsonData != null)
+      return PaypalSettingData.fromJson((jsonDecode(jsonData)));
   }
 
   static String payFast = "payFast";
@@ -72,7 +77,8 @@ class UserPreference {
 
   static getPayFastData() {
     final String? jsonData = _preferences.getString(payFast);
-    if (jsonData != null) return PayFastSettingData.fromJson((jsonDecode(jsonData)));
+    if (jsonData != null)
+      return PayFastSettingData.fromJson((jsonDecode(jsonData)));
   }
 
   static String mercadoPago = "mercadoPago";
@@ -84,7 +90,8 @@ class UserPreference {
 
   static getMercadoPago() {
     final String? jsonData = _preferences.getString(mercadoPago);
-    if (jsonData != null) return MercadoPagoSettingData.fromJson((jsonDecode(jsonData)));
+    if (jsonData != null)
+      return MercadoPagoSettingData.fromJson((jsonDecode(jsonData)));
   }
 
   static String stripeKey = "stripeKey";
@@ -103,7 +110,8 @@ class UserPreference {
 
   static String flutterWaveStack = "flutterWaveStack";
 
-  static setFlutterWaveData(FlutterWaveSettingData flutterWaveSettingData) async {
+  static setFlutterWaveData(
+      FlutterWaveSettingData flutterWaveSettingData) async {
     debugPrint(flutterWaveSettingData.toString());
     final jsonData = jsonEncode(flutterWaveSettingData);
     await _preferences.setString(flutterWaveStack, jsonData);
@@ -155,7 +163,6 @@ class UserPreference {
     return OrangeMoney.fromJson(stripeData);
   }
 
-
   static String xenditSettings = "xenditSettings";
 
   static setXenditData(Xendit xenditModel) async {
@@ -168,7 +175,6 @@ class UserPreference {
     final stripeData = jsonDecode(jsonData!);
     return Xendit.fromJson(stripeData);
   }
-
 
   static String midTransSettings = "midTransSettings";
 
@@ -183,8 +189,6 @@ class UserPreference {
     return MidTrans.fromJson(stripeData);
   }
 
-
-
   static const _orderId = "orderId";
 
   static setOrderId({required String orderId}) {
@@ -195,7 +199,6 @@ class UserPreference {
     final String? orderId = _preferences.getString(_orderId);
     return orderId != null ? orderId : "";
   }
-
 
   static const _paymentId = "paymentId";
 

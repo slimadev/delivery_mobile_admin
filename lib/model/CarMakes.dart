@@ -2,6 +2,8 @@ class CarMakes {
   String? name;
   String? id;
   bool? isActive;
+  String? vehicleType;
+
 
   CarMakes({this.name, this.id, this.isActive});
 
@@ -9,6 +11,7 @@ class CarMakes {
     name = json['name'] ?? '';
     id = json['id'] ?? '';
     isActive = json['isActive'] ?? false;
+    vehicleType = json['vehicleTypeId'];
   }
 
   Map<String, dynamic> toJson() {
@@ -16,6 +19,7 @@ class CarMakes {
     data['name'] = this.name;
     data['id'] = this.id;
     data['isActive'] = this.isActive;
+    data['vehicleTypeId'] = this.vehicleType;
     return data;
   }
 }

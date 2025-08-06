@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -5,20 +6,47 @@ import 'package:emartdriver/main.dart';
 import 'package:emartdriver/rental_service/rental_service_dashboard.dart';
 import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/ui/chat_screen/chat_screen.dart';
+import 'package:emartdriver/ui/home/HomeScreen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get/get.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:emartdriver/ui/container/ContainerScreen.dart';
+
+// Evento para mostrar detalhes da ordem
+class ShowOrderDetailsEvent {
+  final String orderId;
+  ShowOrderDetailsEvent(this.orderId);
+}
+
+// EventBus para comunicação entre componentes
+class EventBus {
+  static final EventBus _instance = EventBus._internal();
+  factory EventBus() => _instance;
+  EventBus._internal();
+
+  final _eventController = StreamController<dynamic>.broadcast();
+  Stream<T> on<T>() =>
+      _eventController.stream.where((event) => event is T).cast<T>();
+  void fire(event) => _eventController.add(event);
+  void dispose() => _eventController.close();
+}
+
+final eventBus = EventBus();
 
 Future<void> firebaseMessageBackgroundHandle(RemoteMessage message) async {
   log("BackGround Message :: ${message.messageId}");
 }
 
 class NotificationService {
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  final GlobalKey<NavigatorState> navigatorKey = new GlobalKey<NavigatorState>();
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  final AudioPlayer audioPlayer = AudioPlayer();
 
   initInfo() async {
-    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
@@ -33,33 +61,60 @@ class NotificationService {
       sound: true,
     );
 
-    if (request.authorizationStatus == AuthorizationStatus.authorized || request.authorizationStatus == AuthorizationStatus.provisional) {
-      const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    if (request.authorizationStatus == AuthorizationStatus.authorized ||
+        request.authorizationStatus == AuthorizationStatus.provisional) {
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
       var iosInitializationSettings = const DarwinInitializationSettings();
-      final InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid, iOS: iosInitializationSettings);
-      await flutterLocalNotificationsPlugin.initialize(initializationSettings, onDidReceiveNotificationResponse: (payload) {});
+      final InitializationSettings initializationSettings =
+          InitializationSettings(
+              android: initializationSettingsAndroid,
+              iOS: iosInitializationSettings);
+      await flutterLocalNotificationsPlugin.initialize(initializationSettings,
+          onDidReceiveNotificationResponse: (payload) {});
       setupInteractedMessage();
     }
   }
 
   Future<void> setupInteractedMessage() async {
-    RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    RemoteMessage? initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
-      FirebaseMessaging.onBackgroundMessage((message) => firebaseMessageBackgroundHandle(message));
+      FirebaseMessaging.onBackgroundMessage(
+          (message) => firebaseMessageBackgroundHandle(message));
     }
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       log("::::::::::::onMessage:::::::::::::::::");
       if (message.notification != null) {
         log(message.notification.toString());
+        log(message.data.toString());
         display(message);
+
+        // if (message.data['type'] == 'new_order' ||
+        //     message.data['subject'] == 'New Order') {
+        // if (navigatorKey.currentContext != null) {
+        //   log("new order");
+        // Garante que está na HomeScreen
+        Navigator.of(navigatorKey.currentContext!)
+            .popUntil((route) => route.isFirst);
+        String? orderId;
+        if (message.data is Map && message.data['id'] != null) {
+          orderId = message.data['id'];
+        }
+        if (orderId != null) {
+          eventBus.fire(ShowOrderDetailsEvent(orderId));
+        }
       }
     });
+
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       log("::::::::::::onMessageOpenedApp:::::::::::::::::");
+      // Parar o som quando a notificação é clicada
+      audioPlayer.stop();
+
       if (message.notification != null) {
         log(message.notification.toString());
-        // display(message);
 
         String orderId = message.data['orderId'];
         if (message.data['type'] == 'rental_order') {
@@ -68,7 +123,25 @@ class NotificationService {
               RentalServiceDashBoard(
                 user: MyAppState.currentUser!,
               ));
-        } else if (message.data['type'] == 'cab_parcel_chat' || message.data['type'] == 'vendor_chat') {
+        } else if (message.data['subject'] == 'New Order') {
+          // Em vez de navegar para uma nova tela, vamos mostrar o popup no HomeScreen
+          if (navigatorKey.currentContext != null) {
+            // Encontra o HomeScreen na pilha de navegação
+            Navigator.of(navigatorKey.currentContext!).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) =>
+                    ContainerScreen(user: MyAppState.currentUser!),
+              ),
+              (route) => false,
+            );
+            log("sla");
+            // Aguarda a HomeScreen montar antes de disparar o evento
+            Future.delayed(Duration(milliseconds: 500), () {
+              eventBus.fire(ShowOrderDetailsEvent(orderId));
+            });
+          }
+        } else if (message.data['type'] == 'cab_parcel_chat' ||
+            message.data['type'] == 'vendor_chat') {
           push(
               navigatorKey.currentContext!,
               ChatScreens(
@@ -123,9 +196,16 @@ class NotificationService {
         importance: Importance.max,
       );
       AndroidNotificationDetails notificationDetails =
-          AndroidNotificationDetails(channel.id, channel.name, channelDescription: 'your channel Description', importance: Importance.high, priority: Priority.high, ticker: 'ticker');
-      const DarwinNotificationDetails darwinNotificationDetails = DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true);
-      NotificationDetails notificationDetailsBoth = NotificationDetails(android: notificationDetails, iOS: darwinNotificationDetails);
+          AndroidNotificationDetails(channel.id, channel.name,
+              channelDescription: 'your channel Description',
+              importance: Importance.high,
+              priority: Priority.high,
+              ticker: 'ticker');
+      const DarwinNotificationDetails darwinNotificationDetails =
+          DarwinNotificationDetails(
+              presentAlert: true, presentBadge: true, presentSound: true);
+      NotificationDetails notificationDetailsBoth = NotificationDetails(
+          android: notificationDetails, iOS: darwinNotificationDetails);
       await FlutterLocalNotificationsPlugin().show(
         0,
         message.notification!.title,

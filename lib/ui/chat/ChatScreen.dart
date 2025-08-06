@@ -1,6 +1,6 @@
 // import 'dart:async';
 // import 'dart:io';
-//
+
 // import 'package:cached_network_image/cached_network_image.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:easy_localization/easy_localization.dart' as easyLocal;
@@ -24,18 +24,18 @@
 // import 'package:path_provider/path_provider.dart';
 // import 'package:permission_handler/permission_handler.dart';
 // import 'package:uuid/uuid.dart';
-//
+
 // enum RecordingState { HIDDEN, VISIBLE, Recording }
-//
+
 // class ChatScreen extends StatefulWidget {
 //   final HomeConversationModel homeConversationModel;
-//
+
 //   const ChatScreen({Key? key, required this.homeConversationModel}) : super(key: key);
-//
+
 //   @override
 //   _ChatScreenState createState() => _ChatScreenState();
 // }
-//
+
 // class _ChatScreenState extends State<ChatScreen> {
 //   final ImagePicker _imagePicker = ImagePicker();
 //   late HomeConversationModel homeConversationModel;
@@ -45,11 +45,11 @@
 //   late Timer audioMessageTimer;
 //   String audioMessageTime = 'Start recording'.tr();
 //   FlutterSoundRecorder? _myRecorder = FlutterSoundRecorder();
-//
+
 //   late String tempPathForAudioMessages;
-//
+
 //   late Stream<ChatModel> chatStream;
-//
+
 //   @override
 //   void initState() {
 //     super.initState();
@@ -57,7 +57,7 @@
 //     homeConversationModel = widget.homeConversationModel;
 //     setupStream();
 //   }
-//
+
 //   setupStream() {
 //     chatStream = _fireStoreUtils.getChatMessages(homeConversationModel).asBroadcastStream();
 //     chatStream.listen((chatModel) {
@@ -67,7 +67,7 @@
 //       }
 //     });
 //   }
-//
+
 //   @override
 //   Widget build(BuildContext context) {
 //     return Scaffold(
@@ -251,7 +251,7 @@
 //       }),
 //     );
 //   }
-//
+
 //   Widget _buildAudioMessageRecorder(BuildContext innerContext) {
 //     return Visibility(
 //       visible: currentRecordingState != RecordingState.HIDDEN,
@@ -343,12 +343,12 @@
 //       ),
 //     );
 //   }
-//
+
 //   Widget buildSubTitle(User friend) {
 //     String text = friend.isActive ? 'Active now'.tr() : 'Last seen on {}'.tr(args: ['${setLastSeen(friend.lastOnlineTimestamp.seconds)}']);
 //     return Text(text, style: TextStyle(fontSize: 15, color: Colors.grey.shade200));
 //   }
-//
+
 //   _onCameraClick() {
 //     final action = CupertinoActionSheet(
 //       message: Text(
@@ -416,7 +416,7 @@
 //     );
 //     showCupertinoModalPopup(context: context, builder: (context) => action);
 //   }
-//
+
 //   Widget buildMessage(MessageData messageData, List<User> members) {
 //     if (messageData.senderID == MyAppState.currentUser!.userID) {
 //       return myMessageView(messageData);
@@ -428,7 +428,7 @@
 //           }).first);
 //     }
 //   }
-//
+
 //   Widget myMessageView(MessageData messageData) {
 //     return Padding(
 //       padding: const EdgeInsets.only(top: 8.0),
@@ -442,7 +442,7 @@
 //       ),
 //     );
 //   }
-//
+
 //   Widget _myMessageContentWidget(MessageData messageData) {
 //     var mediaUrl = '';
 //     if (messageData.url.url.isNotEmpty) {
@@ -586,7 +586,7 @@
 //       ]);
 //     }
 //   }
-//
+
 //   Widget remoteMessageView(MessageData messageData, User sender) {
 //     return Padding(
 //       padding: const EdgeInsets.only(top: 8.0),
@@ -617,7 +617,7 @@
 //       ),
 //     );
 //   }
-//
+
 //   Widget _remoteMessageContentWidget(MessageData messageData) {
 //     var mediaUrl = '';
 //     if (messageData.url.url.isNotEmpty) {
@@ -768,7 +768,7 @@
 //       );
 //     }
 //   }
-//
+
 //   Future<bool> _checkChannelNullability(ConversationModel? conversationModel) async {
 //     if (conversationModel != null) {
 //       return true;
@@ -781,7 +781,7 @@
 //       } else {
 //         channelID = user.userID + friend.userID;
 //       }
-//
+
 //       ConversationModel conversation =
 //           ConversationModel(creatorId: user.userID, id: channelID, lastMessageDate: Timestamp.now(), lastMessage: '{} sent a message'.tr(args: ['${user.fullName()}']));
 //       bool isSuccessful = await _fireStoreUtils.createConversation(conversation);
@@ -793,7 +793,7 @@
 //       return isSuccessful;
 //     }
 //   }
-//
+
 //   _sendMessage(String content, Url url, String videoThumbnail) async {
 //     MessageData message = MessageData(
 //         content: content,
@@ -808,7 +808,7 @@
 //         senderProfilePictureURL: MyAppState.currentUser!.profilePictureURL,
 //         url: url,
 //         videoThumbnail: videoThumbnail);
-//
+
 //     if (url.mime.contains('image')) {
 //       message.content = '{} sent an image'.tr(args: ['${MyAppState.currentUser!.firstName}']);
 //     } else if (url.mime.contains('video')) {
@@ -820,13 +820,13 @@
 //       await _fireStoreUtils.sendMessage(homeConversationModel.members, message, homeConversationModel.conversationModel!);
 //       homeConversationModel.conversationModel!.lastMessageDate = Timestamp.now();
 //       homeConversationModel.conversationModel!.lastMessage = message.content;
-//
+
 //       await _fireStoreUtils.updateChannel(homeConversationModel.conversationModel!);
 //     } else {
 //       showAlertDialog(context, 'An error occurred'.tr(), 'Failed to send message'.tr(), true);
 //     }
 //   }
-//
+
 //   @override
 //   void dispose() {
 //     _messageController.dispose();
@@ -834,7 +834,7 @@
 //     _myRecorder = null;
 //     super.dispose();
 //   }
-//
+
 //   _onPrivateChatSettingsClick() {
 //     final action = CupertinoActionSheet(
 //       message: Text(
@@ -884,7 +884,7 @@
 //     );
 //     showCupertinoModalPopup(context: context, builder: (context) => action);
 //   }
-//
+
 //   _showAlertDialog(BuildContext context, String title, String message) {
 //     AlertDialog alert = AlertDialog(
 //       title: Text(title),
@@ -897,7 +897,7 @@
 //       },
 //     );
 //   }
-//
+
 //   _onMicClicked() async {
 //     if (currentRecordingState == RecordingState.HIDDEN) {
 //       FocusScope.of(context).unfocus();
@@ -910,7 +910,7 @@
 //     }
 //     setState(() {});
 //   }
-//
+
 //   _onSendRecord() async {
 //     await _myRecorder!.stopRecorder();
 //     audioMessageTimer.cancel();
@@ -921,7 +921,7 @@
 //     Url url = await _fireStoreUtils.uploadAudioFile(File(tempPathForAudioMessages), context);
 //     _sendMessage('', url, '');
 //   }
-//
+
 //   _onCancelRecording() async {
 //     await _myRecorder!.stopRecorder();
 //     audioMessageTimer.cancel();
@@ -930,7 +930,7 @@
 //       currentRecordingState = RecordingState.VISIBLE;
 //     });
 //   }
-//
+
 //   _onStartRecording(BuildContext innerContext) async {
 //     var status = await Permission.microphone.request();
 //     if (status == PermissionStatus.granted) {

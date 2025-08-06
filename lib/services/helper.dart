@@ -17,6 +17,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:location/location.dart';
+import 'package:flutter/material.dart';
+// import 'package:location/location.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 String? validateName(String? value) {
   String pattern = r'(^[a-zA-Z ]*$)';
@@ -30,14 +33,20 @@ String? validateName(String? value) {
 }
 
 String? validateMobile(String? value) {
-  String pattern = r'(^\+?[0-9]*$)';
-  RegExp regExp = RegExp(pattern);
-  if (value?.length == 0) {
+  if (value == null || value.isEmpty) {
     return 'Mobile is required'.tr();
-  } else if (!regExp.hasMatch(value ?? '')) {
-    return 'Mobile Number must be digits'.tr();
-  } else if (value!.length < 10 || value.length > 10) {
+  }
+  // Remove espaços, traços e parênteses
+  String cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+  // Remove o DDI se vier junto
+  if (cleaned.startsWith('258')) {
+    cleaned = cleaned.substring(3);
+  }
+  if (cleaned.length != 9) {
     return 'please enter valid number'.tr();
+  }
+  if (!RegExp(r'^[0-9]{9}\$').hasMatch(cleaned)) {
+    return 'Mobile Number must be digits'.tr();
   }
   return null;
 }
@@ -57,8 +66,25 @@ String? validatePassword(String? value) {
 }
 
 String? validateEmail(String? value) {
-  String pattern = r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$';
+  String pattern =
+      r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$';
   RegExp regex = RegExp(pattern);
+  // if (value == null || value.isEmpty) {
+  //   return null;
+  // }
+  if (!regex.hasMatch(value ?? ''))
+    return 'Please use a valid mail'.tr();
+  else
+    return null;
+}
+
+String? validateEmailNull(String? value) {
+  String pattern =
+      r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$';
+  RegExp regex = RegExp(pattern);
+  if (value == null || value.isEmpty) {
+    return null;
+  }
   if (!regex.hasMatch(value ?? ''))
     return 'Please use a valid mail'.tr();
   else
@@ -75,7 +101,8 @@ String? validateConfirmPassword(String? password, String? confirmPassword) {
   }
 }
 
-String? validateEmptyField(String? text) => text == null || text.isEmpty ? "This field can't be empty.".tr() : null;
+String? validateEmptyField(String? text) =>
+    text == null || text.isEmpty ? "This field can't be empty.".tr() : null;
 
 //helper method to show progress
 
@@ -88,7 +115,8 @@ hideProgress() async {
 }
 
 //helper method to show alert dialog
-showAlertDialog(BuildContext context, String title, String content, bool addOkButton) {
+showAlertDialog(
+    BuildContext context, String title, String content, bool addOkButton) {
   // set up the AlertDialog
   Widget? okButton;
   if (addOkButton) {
@@ -112,7 +140,10 @@ showAlertDialog(BuildContext context, String title, String content, bool addOkBu
           return alert;
         });
   } else {
-    AlertDialog alert = AlertDialog(title: Text(title), content: Text(content), actions: [if (okButton != null) okButton]);
+    AlertDialog alert = AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [if (okButton != null) okButton]);
 
     showDialog(
       context: context,
@@ -124,15 +155,19 @@ showAlertDialog(BuildContext context, String title, String content, bool addOkBu
 }
 
 pushReplacement(BuildContext context, Widget destination) {
-  Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => destination));
+  Navigator.of(context)
+      .pushReplacement(MaterialPageRoute(builder: (context) => destination));
 }
 
 push(BuildContext context, Widget destination) {
-  Navigator.of(context).push(MaterialPageRoute(builder: (context) => destination));
+  Navigator.of(context)
+      .push(MaterialPageRoute(builder: (context) => destination));
 }
 
 pushAndRemoveUntil(BuildContext context, Widget destination, bool predict) {
-  Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => destination), (Route<dynamic> route) => predict);
+  Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => destination),
+      (Route<dynamic> route) => predict);
 }
 
 String setLastSeen(int seconds) {
@@ -149,13 +184,17 @@ String setLastSeen(int seconds) {
   }
 }
 
-Widget displayCircleImage(String picUrl, double size, hasBorder) => CachedNetworkImage(
-    height: size,
-    width: size,
-    imageBuilder: (context, imageProvider) => _getCircularImageProvider(imageProvider, size, hasBorder),
-    imageUrl: picUrl,
-    placeholder: (context, url) => _getPlaceholderOrErrorImage(size, hasBorder),
-    errorWidget: (context, url, error) => _getPlaceholderOrErrorImage(size, hasBorder));
+Widget displayCircleImage(String picUrl, double size, hasBorder) =>
+    CachedNetworkImage(
+        height: size,
+        width: size,
+        imageBuilder: (context, imageProvider) =>
+            _getCircularImageProvider(imageProvider, size, hasBorder),
+        imageUrl: picUrl,
+        placeholder: (context, url) =>
+            _getPlaceholderOrErrorImage(size, hasBorder),
+        errorWidget: (context, url, error) =>
+            _getPlaceholderOrErrorImage(size, hasBorder));
 
 Widget _getPlaceholderOrErrorImage(double size, hasBorder) => ClipOval(
       child: Container(
@@ -179,7 +218,8 @@ Widget _getPlaceholderOrErrorImage(double size, hasBorder) => ClipOval(
       ),
     );
 
-Widget _getCircularImageProvider(ImageProvider provider, double size, bool hasBorder) {
+Widget _getCircularImageProvider(
+    ImageProvider provider, double size, bool hasBorder) {
   return ClipOval(
       child: Container(
     width: size,
@@ -198,53 +238,55 @@ Widget _getCircularImageProvider(ImageProvider provider, double size, bool hasBo
   ));
 }
 
-Widget displayCarImage(String picUrl, double size, hasBorder) => CachedNetworkImage(
-    height: size,
-    width: size,
-    imageBuilder: (context, imageProvider) => _getCircularImageProvider(imageProvider, size, hasBorder),
-    imageUrl: picUrl,
-    placeholder: (context, url) => ClipOval(
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-                color: const Color(COLOR_ACCENT),
-                borderRadius: BorderRadius.all(Radius.circular(size / 2)),
-                border: Border.all(
-                  color: Colors.white,
-                  style: hasBorder ? BorderStyle.solid : BorderStyle.none,
-                  width: 2.0,
-                ),
-                image: DecorationImage(
-                    image: Image.asset(
-                  'assets/images/car_default_image.png',
-                  fit: BoxFit.cover,
-                  height: size,
-                  width: size,
-                ).image)),
-          ),
-        ),
-    errorWidget: (context, url, error) => ClipOval(
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-                color: const Color(COLOR_ACCENT),
-                borderRadius: BorderRadius.all(Radius.circular(size / 2)),
-                border: Border.all(
-                  color: Colors.white,
-                  style: hasBorder ? BorderStyle.solid : BorderStyle.none,
-                  width: 2.0,
-                ),
-                image: DecorationImage(
-                    image: Image.asset(
-                  'assets/images/car_default_image.png',
-                  fit: BoxFit.cover,
-                  height: size,
-                  width: size,
-                ).image)),
-          ),
-        ));
+Widget displayCarImage(String picUrl, double size, hasBorder) =>
+    CachedNetworkImage(
+        height: size,
+        width: size,
+        imageBuilder: (context, imageProvider) =>
+            _getCircularImageProvider(imageProvider, size, hasBorder),
+        imageUrl: picUrl,
+        placeholder: (context, url) => ClipOval(
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                    color: const Color(COLOR_ACCENT),
+                    borderRadius: BorderRadius.all(Radius.circular(size / 2)),
+                    border: Border.all(
+                      color: Colors.white,
+                      style: hasBorder ? BorderStyle.solid : BorderStyle.none,
+                      width: 2.0,
+                    ),
+                    image: DecorationImage(
+                        image: Image.asset(
+                      'assets/images/car_default_image.png',
+                      fit: BoxFit.cover,
+                      height: size,
+                      width: size,
+                    ).image)),
+              ),
+            ),
+        errorWidget: (context, url, error) => ClipOval(
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                    color: const Color(COLOR_ACCENT),
+                    borderRadius: BorderRadius.all(Radius.circular(size / 2)),
+                    border: Border.all(
+                      color: Colors.white,
+                      style: hasBorder ? BorderStyle.solid : BorderStyle.none,
+                      width: 2.0,
+                    ),
+                    image: DecorationImage(
+                        image: Image.asset(
+                      'assets/images/car_default_image.png',
+                      fit: BoxFit.cover,
+                      height: size,
+                      width: size,
+                    ).image)),
+              ),
+            ));
 
 bool isDarkMode(BuildContext context) {
   if (Theme.of(context).brightness == Brightness.light) {
@@ -286,13 +328,17 @@ Future<Position> getCurrentLocation() async {
 
   if (permission == LocationPermission.deniedForever) {
     // Permissions are denied forever, handle appropriately.
-    return Future.error('Location permissions are permanently denied, we cannot request permissions.'.tr());
+    return Future.error(
+        'Location permissions are permanently denied, we cannot request permissions.'
+            .tr());
   }
 
   // When we reach here, permissions are granted and we can
   // continue accessing the position of the device.
   return await Geolocator.getCurrentPosition();
 }
+
+
 
 String audioMessageTime(Duration audioDuration) {
   String twoDigits(int n) {
@@ -329,42 +375,59 @@ String updateTime(Timer timer) {
   return '${twoDigitsHours(callDuration.inHours)}$twoDigitMinutes:$twoDigitSeconds';
 }
 
-Widget showEmptyState(String title, {String? description, String? buttonTitle, bool? isDarkMode, VoidCallback? action}) {
+Widget showEmptyState(String title,
+    {String? description,
+    String? buttonTitle,
+    bool? isDarkMode,
+    VoidCallback? action}) {
   return Center(
-    child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.center, children: [
-      const SizedBox(height: 30),
-      Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.black.withOpacity(0.40))),
-      const SizedBox(height: 15),
-      Text(
-        description == null ? "" : description.toString(),
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 16),
-      ),
-      const SizedBox(height: 25),
-      if (action != null)
-        Padding(
-          padding: const EdgeInsets.only(left: 24.0, right: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: ElevatedButton(
-                child: Text(
-                  buttonTitle!,
-                  style: TextStyle(color: isDarkMode! ? Colors.black.withOpacity(0.60) : Colors.white, fontSize: 18),
-                ),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  backgroundColor: Color(COLOR_PRIMARY),
-                ),
-                onPressed: action),
+    child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 30),
+          Text(title,
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black.withOpacity(0.40))),
+          const SizedBox(height: 15),
+          Text(
+            description == null ? "" : description.toString(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16),
           ),
-        )
-    ]),
+          const SizedBox(height: 25),
+          if (action != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 24.0, right: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: double.infinity),
+                child: ElevatedButton(
+                    child: Text(
+                      buttonTitle!,
+                      style: TextStyle(
+                          color: isDarkMode!
+                              ? Colors.black.withOpacity(0.60)
+                              : Colors.white,
+                          fontSize: 18),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: Color(COLOR_PRIMARY),
+                    ),
+                    onPressed: action),
+              ),
+            )
+        ]),
   );
 }
 
 String orderDate(Timestamp timestamp) {
-  return DateFormat('EEE MMM d yyyy').format(DateTime.fromMillisecondsSinceEpoch(timestamp.millisecondsSinceEpoch));
+  return DateFormat('EEE MMM d yyyy').format(
+      DateTime.fromMillisecondsSinceEpoch(timestamp.millisecondsSinceEpoch));
 }
 
 updateWallateAmount(OrderModel orderModel) async {
@@ -373,14 +436,18 @@ updateWallateAmount(OrderModel orderModel) async {
   double specialDiscount = 0.0;
   double taxAmount = 0.0;
   orderModel.products.forEach((element) {
-    if (element.extras_price != null && element.extras_price!.isNotEmpty && double.parse(element.extras_price!) != 0.0) {
+    if (element.extras_price != null &&
+        element.extras_price!.isNotEmpty &&
+        double.parse(element.extras_price!) != 0.0) {
       total += element.quantity * double.parse(element.extras_price!);
     }
     total += element.quantity * double.parse(element.price);
   });
 
-  if (orderModel.specialDiscount != null || orderModel.specialDiscount!['special_discount'] != null) {
-    specialDiscount = double.parse(orderModel.specialDiscount!['special_discount'].toString());
+  if (orderModel.specialDiscount != null ||
+      orderModel.specialDiscount!['special_discount'] != null) {
+    specialDiscount = double.parse(
+        orderModel.specialDiscount!['special_discount'].toString());
   }
 
   if (orderModel.discount != null) {
@@ -391,17 +458,21 @@ updateWallateAmount(OrderModel orderModel) async {
 
   if (orderModel.taxModel != null) {
     for (var element in orderModel.taxModel!) {
-      taxAmount = taxAmount + calculateTax(amount: totalamount.toString(), taxModel: element);
+      taxAmount = taxAmount +
+          calculateTax(amount: totalamount.toString(), taxModel: element);
     }
   }
 
   num driverAmount = 0;
   if (orderModel.payment_method.toLowerCase() != "cod") {
-    driverAmount += (double.parse(orderModel.deliveryCharge!) + double.parse(orderModel.tipValue!));
+    driverAmount += (double.parse(orderModel.deliveryCharge!) +
+        double.parse(orderModel.tipValue!));
   } else {
     driverAmount += -totalamount - taxAmount;
   }
-  await FireStoreUtils.updateWalletAmount(userId: orderModel.driverID!, amount: num.parse(driverAmount.toStringAsFixed(2)));
+  await FireStoreUtils.updateWalletAmount(
+      userId: orderModel.driverID!,
+      amount: num.parse(driverAmount.toStringAsFixed(2)));
 }
 
 /*updateWallateAmount(OrderModel orderModel) {
@@ -455,20 +526,29 @@ updateCabWalletAmount(CabOrderModel orderModel) {
     }
   }*/
 
-  double subTotal = double.parse(orderModel.subTotal.toString()) - double.parse(orderModel.discount.toString());
+  double subTotal = double.parse(orderModel.subTotal.toString()) -
+      double.parse(orderModel.discount.toString());
 
   if (orderModel.taxModel != null) {
     for (var element in orderModel.taxModel!) {
-      totalTax = totalTax + calculateTax(amount: subTotal.toString(), taxModel: element);
+      totalTax = totalTax +
+          calculateTax(amount: subTotal.toString(), taxModel: element);
     }
   }
   double adminComm = 0.0;
   if (orderModel.adminCommission!.isNotEmpty) {
-    adminComm = (orderModel.adminCommissionType!.toLowerCase() == 'Percent'.toLowerCase() || orderModel.adminCommissionType!.toLowerCase() == 'percentage'.toLowerCase()) ? (subTotal * double.parse(orderModel.adminCommission!)) / 100 : double.parse(orderModel.adminCommission!);
+    adminComm = (orderModel.adminCommissionType!.toLowerCase() ==
+                'Percent'.toLowerCase() ||
+            orderModel.adminCommissionType!.toLowerCase() ==
+                'percentage'.toLowerCase())
+        ? (subTotal * double.parse(orderModel.adminCommission!)) / 100
+        : double.parse(orderModel.adminCommission!);
   }
 
   print("--->finalAmount---- $subTotal");
-  double tipValue = orderModel.tipValue!.isEmpty ? 0.0 : double.parse(orderModel.tipValue.toString());
+  double tipValue = orderModel.tipValue!.isEmpty
+      ? 0.0
+      : double.parse(orderModel.tipValue.toString());
   double driverAmount = 0;
   if (orderModel.paymentMethod.toLowerCase() != "cod") {
     driverAmount = (subTotal + totalTax + tipValue) - adminComm;
@@ -489,7 +569,9 @@ updateCabWalletAmount(CabOrderModel orderModel) {
   // if (orderModel.driver!.companyId.isNotEmpty) {
   //   FireStoreUtils.updateCompanyWalletAmount(companyId: orderModel.driver!.companyId, amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
   // } else {
-  FireStoreUtils.updateCurrentUserWallet(userId: orderModel.driverID!, amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
+  FireStoreUtils.updateCurrentUserWallet(
+      userId: orderModel.driverID!,
+      amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
   // }
 
   // FireStoreUtils.updateWalletAmount(userId: orderModel.driverID!, amount: num.parse(driverAmount.toStringAsFixed(decimal)));
@@ -507,17 +589,24 @@ updateParcelWalletAmount(ParcelOrderModel orderModel) {
     }
   }*/
 
-  double subTotal = double.parse(orderModel.subTotal.toString()) - double.parse(orderModel.discount.toString());
+  double subTotal = double.parse(orderModel.subTotal.toString()) -
+      double.parse(orderModel.discount.toString());
 
   if (orderModel.taxModel != null) {
     for (var element in orderModel.taxModel!) {
-      totalTax = totalTax + calculateTax(amount: subTotal.toString(), taxModel: element);
+      totalTax = totalTax +
+          calculateTax(amount: subTotal.toString(), taxModel: element);
     }
   }
 
   double adminComm = 0.0;
   if (orderModel.adminCommission!.isNotEmpty) {
-    adminComm = (orderModel.adminCommissionType!.toLowerCase() == 'Percent'.toLowerCase() || orderModel.adminCommissionType!.toLowerCase() == 'percentage'.toLowerCase()) ? (subTotal * double.parse(orderModel.adminCommission!)) / 100 : double.parse(orderModel.adminCommission!);
+    adminComm = (orderModel.adminCommissionType!.toLowerCase() ==
+                'Percent'.toLowerCase() ||
+            orderModel.adminCommissionType!.toLowerCase() ==
+                'percentage'.toLowerCase())
+        ? (subTotal * double.parse(orderModel.adminCommission!)) / 100
+        : double.parse(orderModel.adminCommission!);
   }
 
   print("--->finalAmount---- $subTotal");
@@ -532,24 +621,34 @@ updateParcelWalletAmount(ParcelOrderModel orderModel) {
 
   print("--->driverAmount---- $driverAmount");
 
-  FireStoreUtils.updateCurrentUserWallet(userId: orderModel.driverID!, amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
+  FireStoreUtils.updateCurrentUserWallet(
+      userId: orderModel.driverID!,
+      amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
 //  FireStoreUtils.parcelOrderTransaction(orderModel: orderModel, driveramount: double.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
 }
 
 updateRentalWalletAmount(RentalOrderModel orderModel) {
   double totalTax = 0.0;
 
-  double subTotal = (double.parse(orderModel.subTotal.toString()) + double.parse(orderModel.driverRate.toString())) - double.parse(orderModel.discount.toString());
+  double subTotal = (double.parse(orderModel.subTotal.toString()) +
+          double.parse(orderModel.driverRate.toString())) -
+      double.parse(orderModel.discount.toString());
 
   if (orderModel.taxModel != null) {
     for (var element in orderModel.taxModel!) {
-      totalTax = totalTax + calculateTax(amount: subTotal.toString(), taxModel: element);
+      totalTax = totalTax +
+          calculateTax(amount: subTotal.toString(), taxModel: element);
     }
   }
 
   double adminComm = 0.0;
   if (orderModel.adminCommission!.isNotEmpty) {
-    adminComm = (orderModel.adminCommissionType!.toLowerCase() == 'Percent'.toLowerCase() || orderModel.adminCommissionType!.toLowerCase() == 'percentage'.toLowerCase()) ? (subTotal * double.parse(orderModel.adminCommission!)) / 100 : double.parse(orderModel.adminCommission!);
+    adminComm = (orderModel.adminCommissionType!.toLowerCase() ==
+                'Percent'.toLowerCase() ||
+            orderModel.adminCommissionType!.toLowerCase() ==
+                'percentage'.toLowerCase())
+        ? (subTotal * double.parse(orderModel.adminCommission!)) / 100
+        : double.parse(orderModel.adminCommission!);
   }
 
   print("--->finalAmount---- $subTotal");
@@ -571,7 +670,9 @@ updateRentalWalletAmount(RentalOrderModel orderModel) {
   // if (orderModel.driver!.companyId.isNotEmpty) {
   //   FireStoreUtils.updateCompanyWalletAmount(companyId: MyAppState.currentUser!.companyId, amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
   // } else {
-  FireStoreUtils.updateCurrentUserWallet(userId: orderModel.driverID!, amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
+  FireStoreUtils.updateCurrentUserWallet(
+      userId: orderModel.driverID!,
+      amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
   // }
   //FireStoreUtils.rentalOrderTransaction(orderModel: orderModel, driveramount: double.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
 }
@@ -588,24 +689,29 @@ updateRentalWalletAmount(RentalOrderModel orderModel) {
   return double.parse(taxVal.toStringAsFixed(currencyData!.decimal));
 */
 
-showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHistoryModel) {
+showWithdrawalModelSheet(
+    BuildContext context, WithdrawHistoryModel withdrawHistoryModel) {
   final size = MediaQuery.of(context).size;
   return showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(25), topRight: Radius.circular(25)),
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(25), topRight: Radius.circular(25)),
       ),
       backgroundColor: AppThemeData.grey50,
       builder: (context) {
         return Container(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 5, left: 10, right: 10),
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 5,
+                left: 10,
+                right: 10),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 10.0,bottom: 20),
+                    padding: const EdgeInsets.only(top: 10.0, bottom: 20),
                     child: Text(
                       'Withdrawal Details'.tr(),
                       style: TextStyle(
@@ -617,9 +723,11 @@ showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHist
                 ),
                 Card(
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 15),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8.0, vertical: 15),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -665,9 +773,11 @@ showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHist
                 ),
                 Card(
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 15),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8.0, vertical: 15),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -677,7 +787,8 @@ showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHist
                             color: Colors.green.withOpacity(0.06),
                             child: Padding(
                               padding: const EdgeInsets.all(10.0),
-                              child: Icon(Icons.account_balance_wallet_rounded, size: 28, color: Color(0xFF00B761)),
+                              child: Icon(Icons.account_balance_wallet_rounded,
+                                  size: 28, color: Color(0xFF00B761)),
                             ),
                           ),
                         ),
@@ -712,7 +823,11 @@ showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHist
                                         style: TextStyle(
                                           fontWeight: FontWeight.w500,
                                           fontSize: 17,
-                                          color: withdrawHistoryModel.paymentStatus == "Success" ? Colors.green : Colors.deepOrangeAccent,
+                                          color: withdrawHistoryModel
+                                                      .paymentStatus ==
+                                                  "Success"
+                                              ? Colors.green
+                                              : Colors.deepOrangeAccent,
                                         ),
                                       ),
                                     ),
@@ -728,7 +843,11 @@ showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHist
                                       " ${amountShow(amount: withdrawHistoryModel.amount.toString())}",
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
-                                        color: withdrawHistoryModel.paymentStatus == "Success" ? Colors.green : Colors.deepOrangeAccent,
+                                        color: withdrawHistoryModel
+                                                    .paymentStatus ==
+                                                "Success"
+                                            ? Colors.green
+                                            : Colors.deepOrangeAccent,
                                         fontSize: 18,
                                       ),
                                     ),
@@ -744,9 +863,11 @@ showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHist
                 ),
                 Card(
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 15),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 25.0, vertical: 15),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -773,7 +894,8 @@ showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHist
                 ),
                 Card(
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -781,7 +903,8 @@ showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHist
                       Visibility(
                         visible: withdrawHistoryModel.note.isNotEmpty,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 15),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 25.0, vertical: 15),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -808,20 +931,24 @@ showWithdrawalModelSheet(BuildContext context, WithdrawHistoryModel withdrawHist
                         ),
                       ),
                       Visibility(
-                        visible: withdrawHistoryModel.note.isNotEmpty && withdrawHistoryModel.adminNote.isNotEmpty,
+                        visible: withdrawHistoryModel.note.isNotEmpty &&
+                            withdrawHistoryModel.adminNote.isNotEmpty,
                         child: Padding(
                           padding: const EdgeInsets.all(10.0),
                           child: Divider(
                             thickness: 2,
                             height: 1,
-                            color: isDarkMode(context) ? Colors.grey.shade700 : Colors.grey.shade300,
+                            color: isDarkMode(context)
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade300,
                           ),
                         ),
                       ),
                       Visibility(
                           visible: withdrawHistoryModel.adminNote.isNotEmpty,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 15),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 25.0, vertical: 15),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [

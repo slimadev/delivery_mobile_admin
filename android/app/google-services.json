@@ -6,7 +6,25 @@
     "storage_bucket": "aika-b3957.firebasestorage.app"
   },
   "client": [
-   
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:561778402648:android:eafafd6a4de09e4c61b12d",
+        "android_client_info": {
+          "package_name": "com.aika.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFEJpaS463yJaQp-yADkel8SS6PxVxZHY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
     {
       "client_info": {
         "mobilesdk_app_id": "1:561778402648:android:becba813d282e40961b12d",
@@ -17,7 +35,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCnjs661IN9_KtWSdv-aJ9tCPGZPiDi2LU"
+          "current_key": "AIzaSyBFEJpaS463yJaQp-yADkel8SS6PxVxZHY"
         }
       ],
       "services": {

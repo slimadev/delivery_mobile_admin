@@ -31,7 +31,8 @@ class ParcelHomeScreen extends StatefulWidget {
   State<ParcelHomeScreen> createState() => _ParcelHomeScreenState();
 }
 
-class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerProviderStateMixin {
+class _ParcelHomeScreenState extends State<ParcelHomeScreen>
+    with SingleTickerProviderStateMixin {
   final fireStoreUtils = FireStoreUtils();
 
   GoogleMapController? _mapController;
@@ -47,21 +48,33 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
 
   setIcons() async {
     if (selectedMapType == 'google') {
-      BitmapDescriptor.fromAssetImage(const ImageConfiguration(size: Size(10, 10)), "assets/images/pickup.png").then((value) {
+      BitmapDescriptor.fromAssetImage(
+              const ImageConfiguration(size: Size(10, 10)),
+              "assets/images/pickup.png")
+          .then((value) {
         departureIcon = value;
       });
 
-      BitmapDescriptor.fromAssetImage(const ImageConfiguration(size: Size(10, 10)), "assets/images/dropoff.png").then((value) {
+      BitmapDescriptor.fromAssetImage(
+              const ImageConfiguration(size: Size(10, 10)),
+              "assets/images/dropoff.png")
+          .then((value) {
         destinationIcon = value;
       });
 
-      BitmapDescriptor.fromAssetImage(const ImageConfiguration(size: Size(10, 10)), "assets/images/ic_taxi.png").then((value) {
+      BitmapDescriptor.fromAssetImage(
+              const ImageConfiguration(size: Size(10, 10)),
+              "assets/images/ic_taxi.png")
+          .then((value) {
         taxiIcon = value;
       });
     } else {
-      departureOsmIcon = Image.asset("assets/images/pickup.png", width: 40, height: 40); //OSM
-      destinationOsmIcon = Image.asset("assets/images/dropoff.png", width: 40, height: 40); //OSM
-      driverOsmIcon = Image.asset("assets/images/ic_taxi.png", width: 100, height: 100); //OSM
+      departureOsmIcon =
+          Image.asset("assets/images/pickup.png", width: 40, height: 40); //OSM
+      destinationOsmIcon =
+          Image.asset("assets/images/dropoff.png", width: 40, height: 40); //OSM
+      driverOsmIcon = Image.asset("assets/images/ic_taxi.png",
+          width: 100, height: 100); //OSM
     }
   }
 
@@ -99,13 +112,15 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
     print('-->endTime${endTimestamp.toDate()}');
     await FirebaseFirestore.instance
         .collection(PARCELORDER)
-        .where('status', whereIn: [ORDER_STATUS_PLACED, ORDER_STATUS_DRIVER_REJECTED])
+        .where('status',
+            whereIn: [ORDER_STATUS_PLACED, ORDER_STATUS_DRIVER_REJECTED])
         .where('senderPickupDateTime', isGreaterThan: startTimestamp)
         .where('senderPickupDateTime', isLessThan: endTimestamp)
         .get()
         .then((value) async {
           print('---->${value.docs.length}');
-          await Future.forEach(value.docs, (QueryDocumentSnapshot<Map<String, dynamic>> element) {
+          await Future.forEach(value.docs,
+              (QueryDocumentSnapshot<Map<String, dynamic>> element) {
             try {
               orders.add(ParcelOrderModel.fromJson(element.data()));
             } catch (e, s) {
@@ -119,7 +134,11 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
       print('---->${orderModel.id}');
       orderModel.trigger_delevery = Timestamp.now();
       orderModel.sendToDriver = true;
-      FirebaseFirestore.instance.collection(PARCELORDER).doc(element.id).set(orderModel.toJson(), SetOptions(merge: true)).then((order) {
+      FirebaseFirestore.instance
+          .collection(PARCELORDER)
+          .doc(element.id)
+          .set(orderModel.toJson(), SetOptions(merge: true))
+          .then((order) {
         print('Done.');
       });
     });
@@ -136,13 +155,17 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
   void initState() {
     if (selectedMapType == 'osm') {
       setState(() {
-        mapOsmController = osmflutter.MapController(initPosition: osmflutter.GeoPoint(latitude: 20.9153, longitude: -100.7439), useExternalTracking: false); //OSM
+        mapOsmController = osmflutter.MapController(
+            initPosition:
+                osmflutter.GeoPoint(latitude: 20.9153, longitude: -100.7439),
+            useExternalTracking: false); //OSM
       });
     }
     getDriver();
     setIcons();
     updateDriverOrder();
-    _animationController = new AnimationController(vsync: this, duration: Duration(seconds: 1));
+    _animationController =
+        new AnimationController(vsync: this, duration: Duration(seconds: 1));
     _animationController!.repeat(reverse: true);
     super.initState();
   }
@@ -175,15 +198,17 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
       body: Column(
         children: [
           Visibility(
-            visible: _driverModel!.inProgressOrderID == null && double.parse(_driverModel!.walletAmount.toString()) < double.parse(minimumDepositToRideAccept),
+            // visible: _driverModel!.inProgressOrderID == null && double.parse(_driverModel!.walletAmount.toString()) < double.parse(minimumDepositToRideAccept),
             child: Align(
               alignment: Alignment.topCenter,
               child: Container(
                 color: Colors.black,
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: Text("${"You have to minimum ".tr()}${amountShow(amount: minimumDepositToRideAccept.toString())} ${"wallet amount to receiving Order".tr()}",
-                      style: TextStyle(color: Colors.white), textAlign: TextAlign.center),
+                  child: Text(
+                      "${"You have to minimum ".tr()}${amountShow(amount: minimumDepositToRideAccept.toString())} ${"wallet amount to receiving Order".tr()}",
+                      style: TextStyle(color: Colors.white),
+                      textAlign: TextAlign.center),
                 ),
               ),
             ),
@@ -202,7 +227,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                               iconWidget: driverOsmIcon,
                             ),
                           ),
-                          userTrackingOption: const osmflutter.UserTrackingOption(
+                          userTrackingOption:
+                              const osmflutter.UserTrackingOption(
                             enableTracking: true,
                             unFollowUser: false,
                           ),
@@ -222,7 +248,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                   )
                 : GoogleMap(
                     onMapCreated: _onMapCreated,
-                    myLocationEnabled: _driverModel!.inProgressOrderID != null ? false : true,
+                    myLocationEnabled:
+                        _driverModel!.inProgressOrderID != null ? false : true,
                     myLocationButtonEnabled: true,
                     mapType: MapType.terrain,
                     zoomControlsEnabled: false,
@@ -230,15 +257,23 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                     markers: _markers.values.toSet(),
                     initialCameraPosition: CameraPosition(
                       zoom: 15,
-                      target: LatLng(_driverModel!.location.latitude, _driverModel!.location.longitude),
+                      target: LatLng(_driverModel!.location.latitude,
+                          _driverModel!.location.longitude),
                     ),
                   ),
           ),
-          _driverModel!.inProgressOrderID != null && currentOrder != null && isShow == true ? buildOrderActionsCard() : Container(),
-          _driverModel!.orderParcelRequestData != null ? showDriverBottomSheet() : Container()
+          _driverModel!.inProgressOrderID != null &&
+                  currentOrder != null &&
+                  isShow == true
+              ? buildOrderActionsCard()
+              : Container(),
+          _driverModel!.orderParcelRequestData != null
+              ? showDriverBottomSheet()
+              : Container()
         ],
       ),
-      floatingActionButton: _driverModel!.orderParcelRequestData != null || _driverModel!.inProgressOrderID == null
+      floatingActionButton: _driverModel!.orderParcelRequestData != null ||
+              _driverModel!.inProgressOrderID == null
           ? null
           : FloatingActionButton(
               onPressed: () {
@@ -270,7 +305,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
     controller.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
-          target: LatLng(locationDataFinal!.latitude ?? 0.0, locationDataFinal!.longitude ?? 0.0),
+          target: LatLng(locationDataFinal!.latitude ?? 0.0,
+              locationDataFinal!.longitude ?? 0.0),
           zoom: 14,
         ),
       ),
@@ -288,9 +324,16 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
     double totalAmount = 0.0;
     double adminComm = 0.0;
 
-    totalAmount = (double.parse(_driverModel!.orderParcelRequestData!.subTotal!.toString()) - double.parse(_driverModel!.orderParcelRequestData!.discount!.toString()));
-    adminComm = (_driverModel!.orderParcelRequestData!.adminCommissionType == 'percentage')
-        ? (totalAmount * double.parse(_driverModel!.orderParcelRequestData!.adminCommission!)) / 100
+    totalAmount = (double.parse(
+            _driverModel!.orderParcelRequestData!.subTotal!.toString()) -
+        double.parse(
+            _driverModel!.orderParcelRequestData!.discount!.toString()));
+    adminComm = (_driverModel!.orderParcelRequestData!.adminCommissionType ==
+            'percentage')
+        ? (totalAmount *
+                double.parse(
+                    _driverModel!.orderParcelRequestData!.adminCommission!)) /
+            100
         : double.parse(_driverModel!.orderParcelRequestData!.adminCommission!);
     return Padding(
       padding: EdgeInsets.all(10),
@@ -311,12 +354,18 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                 Expanded(
                   child: Text(
                     "Trip Distance".tr(),
-                    style: TextStyle(color: Color(0xffADADAD), fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                    style: TextStyle(
+                        color: Color(0xffADADAD),
+                        fontFamily: AppThemeData.regular,
+                        letterSpacing: 0.5),
                   ),
                 ),
                 Text(
                   "${_driverModel!.orderParcelRequestData!.distance.toString()} km",
-                  style: TextStyle(color: Color(0xffFFFFFF), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                  style: TextStyle(
+                      color: Color(0xffFFFFFF),
+                      fontFamily: AppThemeData.medium,
+                      letterSpacing: 0.5),
                 ),
               ],
             ),
@@ -329,12 +378,18 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                 Expanded(
                   child: Text(
                     "Delivery charge".tr(),
-                    style: TextStyle(color: Color(0xffADADAD), fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                    style: TextStyle(
+                        color: Color(0xffADADAD),
+                        fontFamily: AppThemeData.regular,
+                        letterSpacing: 0.5),
                   ),
                 ),
                 Text(
                   "${amountShow(amount: _driverModel!.orderParcelRequestData!.subTotal.toString())}",
-                  style: TextStyle(color: Color(0xffFFFFFF), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                  style: TextStyle(
+                      color: Color(0xffFFFFFF),
+                      fontFamily: AppThemeData.medium,
+                      letterSpacing: 0.5),
                 ),
               ],
             ),
@@ -347,12 +402,18 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                 Expanded(
                   child: Text(
                     'Admin commission'.tr(),
-                    style: TextStyle(color: Color(0xffADADAD), fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                    style: TextStyle(
+                        color: Color(0xffADADAD),
+                        fontFamily: AppThemeData.regular,
+                        letterSpacing: 0.5),
                   ),
                 ),
                 Text(
                   "(-${amountShow(amount: adminComm.toString())})",
-                  style: TextStyle(color: Color(0xffFFFFFF), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                  style: TextStyle(
+                      color: Color(0xffFFFFFF),
+                      fontFamily: AppThemeData.medium,
+                      letterSpacing: 0.5),
                 ),
               ],
             ),
@@ -360,7 +421,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
             Card(
               color: Color(0xffFFFFFF),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 10),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14.0, horizontal: 10),
                 child: Row(
                   children: [
                     Image.asset(
@@ -377,7 +439,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             "${_driverModel!.orderParcelRequestData!.sender!.address} ",
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: Color(0xff333333), fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                            style: TextStyle(
+                                color: Color(0xff333333),
+                                fontFamily: AppThemeData.regular,
+                                letterSpacing: 0.5),
                           ),
                         ),
                         SizedBox(height: 22),
@@ -387,7 +452,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             "${_driverModel!.orderParcelRequestData!.receiver!.address}",
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: Color(0xff333333), fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                            style: TextStyle(
+                                color: Color(0xff333333),
+                                fontFamily: AppThemeData.regular,
+                                letterSpacing: 0.5),
                           ),
                         ),
                       ],
@@ -405,7 +473,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                   width: MediaQuery.of(context).size.width / 2.5,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 6, horizontal: 12),
                       backgroundColor: Color(COLOR_PRIMARY),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.all(
@@ -415,7 +484,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                     ),
                     child: Text(
                       'Reject'.tr(),
-                      style: TextStyle(color: Color(0xffFFFFFF), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                      style: TextStyle(
+                          color: Color(0xffFFFFFF),
+                          fontFamily: AppThemeData.medium,
+                          letterSpacing: 0.5),
                     ),
                     onPressed: () async {
                       showProgress(context, 'Rejecting order...'.tr(), false);
@@ -434,7 +506,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                   width: MediaQuery.of(context).size.width / 2.5,
                   child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 6, horizontal: 12),
                         backgroundColor: Color(COLOR_PRIMARY),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(
@@ -444,7 +517,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                       ),
                       child: Text(
                         'Accept'.tr(),
-                        style: TextStyle(color: Color(0xffFFFFFF), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                        style: TextStyle(
+                            color: Color(0xffFFFFFF),
+                            fontFamily: AppThemeData.medium,
+                            letterSpacing: 0.5),
                       ),
                       onPressed: () async {
                         if (_timer != null) {
@@ -487,8 +563,12 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
     if (_driverModel!.inProgressOrderID != null) {
       getCurrentOrder();
     }
-    Map<String, dynamic> payLoad = <String, dynamic>{"type": "parcel_order", "orderId": orderModel.id};
-    await SendNotification.sendFcmMessage(parcelAccepted, orderModel.author!.fcmToken, payLoad);
+    Map<String, dynamic> payLoad = <String, dynamic>{
+      "type": "parcel_order",
+      "orderId": orderModel.id
+    };
+    await SendNotification.sendFcmMessage(
+        parcelAccepted, orderModel.author!.fcmToken, payLoad);
 
     setState(() {
       isShow = true;
@@ -518,8 +598,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
         PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
           googleApiKey: GOOGLE_API_KEY,
           request: PolylineRequest(
-              origin: PointLatLng(_driverModel!.location.latitude, _driverModel!.location.longitude),
-              destination: PointLatLng(currentOrder!.senderLatLong!.latitude, currentOrder!.senderLatLong!.longitude),
+              origin: PointLatLng(_driverModel!.location.latitude,
+                  _driverModel!.location.longitude),
+              destination: PointLatLng(currentOrder!.senderLatLong!.latitude,
+                  currentOrder!.senderLatLong!.longitude),
               mode: TravelMode.driving),
         );
 
@@ -534,7 +616,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
           _markers['Driver'] = Marker(
               markerId: const MarkerId('Driver'),
               infoWindow: const InfoWindow(title: "Driver"),
-              position: LatLng(_driverModel!.location.latitude, _driverModel!.location.longitude),
+              position: LatLng(_driverModel!.location.latitude,
+                  _driverModel!.location.longitude),
               icon: taxiIcon!,
               rotation: double.parse(_driverModel!.rotation.toString()));
         });
@@ -543,7 +626,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
         _markers['Departure'] = Marker(
           markerId: const MarkerId('Departure'),
           infoWindow: const InfoWindow(title: "Departure"),
-          position: LatLng(currentOrder!.senderLatLong!.latitude, currentOrder!.senderLatLong!.longitude),
+          position: LatLng(currentOrder!.senderLatLong!.latitude,
+              currentOrder!.senderLatLong!.longitude),
           icon: departureIcon!,
         );
 
@@ -551,7 +635,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
         _markers['Destination'] = Marker(
           markerId: const MarkerId('Destination'),
           infoWindow: const InfoWindow(title: "Destination"),
-          position: LatLng(currentOrder!.receiverLatLong!.latitude, currentOrder!.receiverLatLong!.longitude),
+          position: LatLng(currentOrder!.receiverLatLong!.latitude,
+              currentOrder!.receiverLatLong!.longitude),
           icon: destinationIcon!,
         );
         addPolyLine(polylineCoordinates);
@@ -561,8 +646,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
         PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
           googleApiKey: GOOGLE_API_KEY,
           request: PolylineRequest(
-              origin: PointLatLng(_driverModel!.location.latitude, _driverModel!.location.longitude),
-              destination: PointLatLng(currentOrder!.receiverLatLong!.latitude, currentOrder!.receiverLatLong!.longitude),
+              origin: PointLatLng(_driverModel!.location.latitude,
+                  _driverModel!.location.longitude),
+              destination: PointLatLng(currentOrder!.receiverLatLong!.latitude,
+                  currentOrder!.receiverLatLong!.longitude),
               mode: TravelMode.driving),
         );
 
@@ -577,7 +664,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
           _markers['Driver'] = Marker(
               markerId: const MarkerId('Driver'),
               infoWindow: const InfoWindow(title: "Driver"),
-              position: LatLng(_driverModel!.location.latitude, _driverModel!.location.longitude),
+              position: LatLng(_driverModel!.location.latitude,
+                  _driverModel!.location.longitude),
               icon: taxiIcon!,
               rotation: double.parse(_driverModel!.rotation.toString()));
         });
@@ -585,14 +673,16 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
         _markers['Departure'] = Marker(
           markerId: const MarkerId('Departure'),
           infoWindow: const InfoWindow(title: "Departure"),
-          position: LatLng(currentOrder!.senderLatLong!.latitude, currentOrder!.senderLatLong!.longitude),
+          position: LatLng(currentOrder!.senderLatLong!.latitude,
+              currentOrder!.senderLatLong!.longitude),
           icon: departureIcon!,
         );
         _markers.remove("Destination");
         _markers['Destination'] = Marker(
           markerId: const MarkerId('Destination'),
           infoWindow: const InfoWindow(title: "Destination"),
-          position: LatLng(currentOrder!.receiverLatLong!.latitude, currentOrder!.receiverLatLong!.longitude),
+          position: LatLng(currentOrder!.receiverLatLong!.latitude,
+              currentOrder!.receiverLatLong!.longitude),
           icon: destinationIcon!,
         );
         addPolyLine(polylineCoordinates);
@@ -602,8 +692,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
         PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
           googleApiKey: GOOGLE_API_KEY,
           request: PolylineRequest(
-              origin: PointLatLng(currentOrder!.senderLatLong!.latitude, currentOrder!.senderLatLong!.longitude),
-              destination: PointLatLng(currentOrder!.receiverLatLong!.latitude, currentOrder!.receiverLatLong!.longitude),
+              origin: PointLatLng(currentOrder!.senderLatLong!.latitude,
+                  currentOrder!.senderLatLong!.longitude),
+              destination: PointLatLng(currentOrder!.receiverLatLong!.latitude,
+                  currentOrder!.receiverLatLong!.longitude),
               mode: TravelMode.driving),
         );
 
@@ -616,14 +708,16 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
         _markers['Departure'] = Marker(
           markerId: const MarkerId('Departure'),
           infoWindow: const InfoWindow(title: "Departure"),
-          position: LatLng(currentOrder!.senderLatLong!.latitude, currentOrder!.senderLatLong!.longitude),
+          position: LatLng(currentOrder!.senderLatLong!.latitude,
+              currentOrder!.senderLatLong!.longitude),
           icon: departureIcon!,
         );
         _markers.remove("Destination");
         _markers['Destination'] = Marker(
           markerId: const MarkerId('Destination'),
           infoWindow: const InfoWindow(title: "Destination"),
-          position: LatLng(currentOrder!.receiverLatLong!.latitude, currentOrder!.receiverLatLong!.longitude),
+          position: LatLng(currentOrder!.receiverLatLong!.latitude,
+              currentOrder!.receiverLatLong!.longitude),
           icon: destinationIcon!,
         );
         addPolyLine(polylineCoordinates);
@@ -647,7 +741,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
             longitude: currentOrder!.senderLatLong!.longitude ?? 0.0,
           );
           await mapOsmController.removeLastRoad();
-          setOsmMarker(departure: sourceLocation, destination: destinationLocation);
+          setOsmMarker(
+              departure: sourceLocation, destination: destinationLocation);
           roadInfo = await mapOsmController.drawRoad(
             sourceLocation,
             destinationLocation,
@@ -659,14 +754,21 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
             ),
           );
           mapOsmController.moveTo(
-            osmflutter.GeoPoint(latitude: sourceLocation.latitude, longitude: sourceLocation.longitude),
+            osmflutter.GeoPoint(
+                latitude: sourceLocation.latitude,
+                longitude: sourceLocation.longitude),
             animate: true,
           );
         } else if (currentOrder!.status == ORDER_STATUS_IN_TRANSIT) {
-          osmflutter.GeoPoint sourceLocation = osmflutter.GeoPoint(latitude: _driverModel!.location.latitude ?? 0.0, longitude: _driverModel!.location.longitude ?? 0.0);
+          osmflutter.GeoPoint sourceLocation = osmflutter.GeoPoint(
+              latitude: _driverModel!.location.latitude ?? 0.0,
+              longitude: _driverModel!.location.longitude ?? 0.0);
 
-          osmflutter.GeoPoint destinationLocation = osmflutter.GeoPoint(latitude: currentOrder!.receiverLatLong!.latitude ?? 0.0, longitude: currentOrder!.receiverLatLong!.longitude ?? 0.0);
-          setOsmMarker(departure: sourceLocation, destination: destinationLocation);
+          osmflutter.GeoPoint destinationLocation = osmflutter.GeoPoint(
+              latitude: currentOrder!.receiverLatLong!.latitude ?? 0.0,
+              longitude: currentOrder!.receiverLatLong!.longitude ?? 0.0);
+          setOsmMarker(
+              departure: sourceLocation, destination: destinationLocation);
           roadInfo = await mapOsmController.drawRoad(
             sourceLocation,
             destinationLocation,
@@ -678,14 +780,21 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
             ),
           );
           mapOsmController.moveTo(
-            osmflutter.GeoPoint(latitude: sourceLocation.latitude, longitude: sourceLocation.longitude),
+            osmflutter.GeoPoint(
+                latitude: sourceLocation.latitude,
+                longitude: sourceLocation.longitude),
             animate: true,
           );
         } else {
-          osmflutter.GeoPoint sourceLocation = osmflutter.GeoPoint(latitude: currentOrder!.senderLatLong!.latitude ?? 0.0, longitude: currentOrder!.senderLatLong!.longitude ?? 0.0);
+          osmflutter.GeoPoint sourceLocation = osmflutter.GeoPoint(
+              latitude: currentOrder!.senderLatLong!.latitude ?? 0.0,
+              longitude: currentOrder!.senderLatLong!.longitude ?? 0.0);
 
-          osmflutter.GeoPoint destinationLocation = osmflutter.GeoPoint(latitude: currentOrder!.receiverLatLong!.latitude ?? 0.0, longitude: currentOrder!.receiverLatLong!.longitude ?? 0.0);
-          setOsmMarker(departure: sourceLocation, destination: destinationLocation);
+          osmflutter.GeoPoint destinationLocation = osmflutter.GeoPoint(
+              latitude: currentOrder!.receiverLatLong!.latitude ?? 0.0,
+              longitude: currentOrder!.receiverLatLong!.longitude ?? 0.0);
+          setOsmMarker(
+              departure: sourceLocation, destination: destinationLocation);
           roadInfo = await mapOsmController.drawRoad(
             sourceLocation,
             destinationLocation,
@@ -697,7 +806,9 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
             ),
           );
           mapOsmController.moveTo(
-            osmflutter.GeoPoint(latitude: sourceLocation.latitude, longitude: sourceLocation.longitude),
+            osmflutter.GeoPoint(
+                latitude: sourceLocation.latitude,
+                longitude: sourceLocation.longitude),
             animate: true,
           );
         }
@@ -707,7 +818,9 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
     }
   }
 
-  setOsmMarker({required osmflutter.GeoPoint departure, required osmflutter.GeoPoint destination}) async {
+  setOsmMarker(
+      {required osmflutter.GeoPoint departure,
+      required osmflutter.GeoPoint destination}) async {
     try {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await mapOsmController
@@ -722,7 +835,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
         });
         await mapOsmController
             .addMarker(destination,
-                markerIcon: osmflutter.MarkerIcon(iconWidget: destinationOsmIcon),
+                markerIcon:
+                    osmflutter.MarkerIcon(iconWidget: destinationOsmIcon),
                 angle: pi / 3,
                 iconAnchor: osmflutter.IconAnchor(
                   anchor: osmflutter.Anchor.top,
@@ -757,7 +871,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
   User? _driverModel = User();
 
   getCurrentOrder() async {
-    ordersFuture = FireStoreUtils().getParcelOrderByID(MyAppState.currentUser!.inProgressOrderID.toString());
+    ordersFuture = FireStoreUtils().getParcelOrderByID(
+        MyAppState.currentUser!.inProgressOrderID.toString());
     ordersFuture.listen((event) {
       print("------->${event!.status}");
       currentOrder = event;
@@ -807,7 +922,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
   Widget buildOrderActionsCard({pedding = 10, width = 60}) {
     bool isPickedUp = false;
     String? buttonText;
-    if (currentOrder!.status == ORDER_STATUS_SHIPPED || currentOrder!.status == ORDER_STATUS_DRIVER_ACCEPTED) {
+    if (currentOrder!.status == ORDER_STATUS_SHIPPED ||
+        currentOrder!.status == ORDER_STATUS_DRIVER_ACCEPTED) {
       buttonText = 'Pick up Parcel'.tr();
       isPickedUp = true;
     } else if (currentOrder!.status == ORDER_STATUS_IN_TRANSIT) {
@@ -819,7 +935,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
       padding: EdgeInsets.symmetric(vertical: 15),
       width: MediaQuery.of(context).size.width,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(18)),
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(8), topRight: Radius.circular(18)),
         color: isDarkMode(context) ? Color(0xff000000) : Color(0xffFFFFFF),
       ),
       child: SingleChildScrollView(
@@ -832,11 +949,19 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
               child: Center(
                 child: Text(
                   "Payment Collect by Receiver".tr(),
-                  style: TextStyle(fontSize: 16, color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff555555), fontFamily: AppThemeData.regular, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  style: TextStyle(
+                      fontSize: 16,
+                      color: isDarkMode(context)
+                          ? Color(0xffFFFFFF)
+                          : Color(0xff555555),
+                      fontFamily: AppThemeData.regular,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5),
                 ),
               ),
             ),
-            if (currentOrder!.status == ORDER_STATUS_SHIPPED || currentOrder!.status == ORDER_STATUS_DRIVER_ACCEPTED)
+            if (currentOrder!.status == ORDER_STATUS_SHIPPED ||
+                currentOrder!.status == ORDER_STATUS_DRIVER_ACCEPTED)
               Column(
                 children: [
                   ListTile(
@@ -850,13 +975,22 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                       'Sender Name',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff000000), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                      style: TextStyle(
+                          color: isDarkMode(context)
+                              ? Color(0xffFFFFFF)
+                              : Color(0xff000000),
+                          fontFamily: AppThemeData.medium,
+                          letterSpacing: 0.5),
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
                         '${currentOrder!.sender!.name}'.tr(),
-                        style: TextStyle(color: Color(0xff555555), fontSize: 12, fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                        style: TextStyle(
+                            color: Color(0xff555555),
+                            fontSize: 12,
+                            fontFamily: AppThemeData.regular,
+                            letterSpacing: 0.5),
                       ),
                     ),
                     trailing: Column(
@@ -874,7 +1008,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                               backgroundColor: Color(0xffFFFFFF),
                             ),
                             onPressed: () {
-                              UrlLauncher.launch("tel://${currentOrder!.sender!.phone}");
+                              UrlLauncher.launch(
+                                  "tel://${currentOrder!.sender!.phone}");
                             },
                             icon: Image.asset(
                               'assets/images/call3x.png',
@@ -883,7 +1018,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             ),
                             label: Text(
                               "CALL".tr(),
-                              style: TextStyle(color: Color(0xff3DAE7D), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  color: Color(0xff3DAE7D),
+                                  fontFamily: AppThemeData.medium,
+                                  letterSpacing: 0.5),
                             )),
                       ],
                     ),
@@ -899,13 +1037,22 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                       'Receiver Name',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff000000), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                      style: TextStyle(
+                          color: isDarkMode(context)
+                              ? Color(0xffFFFFFF)
+                              : Color(0xff000000),
+                          fontFamily: AppThemeData.medium,
+                          letterSpacing: 0.5),
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
                         '${currentOrder!.receiver!.name}'.tr(),
-                        style: TextStyle(color: Color(0xff555555), fontSize: 12, fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                        style: TextStyle(
+                            color: Color(0xff555555),
+                            fontSize: 12,
+                            fontFamily: AppThemeData.regular,
+                            letterSpacing: 0.5),
                       ),
                     ),
                     trailing: Column(
@@ -923,7 +1070,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                               backgroundColor: Color(0xffFFFFFF),
                             ),
                             onPressed: () {
-                              UrlLauncher.launch("tel://${currentOrder!.receiver!.phone}");
+                              UrlLauncher.launch(
+                                  "tel://${currentOrder!.receiver!.phone}");
                             },
                             icon: Image.asset(
                               'assets/images/call3x.png',
@@ -932,7 +1080,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             ),
                             label: Text(
                               "CALL".tr(),
-                              style: TextStyle(color: Color(0xff3DAE7D), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  color: Color(0xff3DAE7D),
+                                  fontFamily: AppThemeData.medium,
+                                  letterSpacing: 0.5),
                             )),
                       ],
                     ),
@@ -948,7 +1099,12 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                       '${currentOrder!.receiver!.address}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff000000), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                      style: TextStyle(
+                          color: isDarkMode(context)
+                              ? Color(0xffFFFFFF)
+                              : Color(0xff000000),
+                          fontFamily: AppThemeData.medium,
+                          letterSpacing: 0.5),
                     ),
                     subtitle: Row(
                       children: [
@@ -956,7 +1112,11 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
                             'ORDER ID '.tr(),
-                            style: TextStyle(color: Color(0xff555555), fontSize: 12, fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                            style: TextStyle(
+                                color: Color(0xff555555),
+                                fontSize: 12,
+                                fontFamily: AppThemeData.regular,
+                                letterSpacing: 0.5),
                           ),
                         ),
                         Padding(
@@ -967,7 +1127,13 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                               '${currentOrder!.id} ',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff000000), fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDarkMode(context)
+                                      ? Color(0xffFFFFFF)
+                                      : Color(0xff000000),
+                                  fontFamily: AppThemeData.regular,
+                                  letterSpacing: 0.5),
                             ),
                           ),
                         ),
@@ -988,7 +1154,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                               backgroundColor: Color(0xffFFFFFF),
                             ),
                             onPressed: () {
-                              UrlLauncher.launch("tel://${currentOrder!.author!.phoneNumber}");
+                              UrlLauncher.launch(
+                                  "tel://${currentOrder!.author!.phoneNumber}");
                             },
                             icon: Image.asset(
                               'assets/images/call3x.png',
@@ -997,7 +1164,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             ),
                             label: Text(
                               "CALL".tr(),
-                              style: TextStyle(color: Color(0xff3DAE7D), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  color: Color(0xff3DAE7D),
+                                  fontFamily: AppThemeData.medium,
+                                  letterSpacing: 0.5),
                             )),
                       ],
                     ),
@@ -1021,13 +1191,22 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                       'Sender Name',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff000000), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                      style: TextStyle(
+                          color: isDarkMode(context)
+                              ? Color(0xffFFFFFF)
+                              : Color(0xff000000),
+                          fontFamily: AppThemeData.medium,
+                          letterSpacing: 0.5),
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
                         '${currentOrder!.sender!.name}'.tr(),
-                        style: TextStyle(color: Color(0xff555555), fontSize: 12, fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                        style: TextStyle(
+                            color: Color(0xff555555),
+                            fontSize: 12,
+                            fontFamily: AppThemeData.regular,
+                            letterSpacing: 0.5),
                       ),
                     ),
                     trailing: Column(
@@ -1045,7 +1224,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                               backgroundColor: Color(0xffFFFFFF),
                             ),
                             onPressed: () {
-                              UrlLauncher.launch("tel://${currentOrder!.sender!.phone}");
+                              UrlLauncher.launch(
+                                  "tel://${currentOrder!.sender!.phone}");
                             },
                             icon: Image.asset(
                               'assets/images/call3x.png',
@@ -1054,7 +1234,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             ),
                             label: Text(
                               "CALL".tr(),
-                              style: TextStyle(color: Color(0xff3DAE7D), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  color: Color(0xff3DAE7D),
+                                  fontFamily: AppThemeData.medium,
+                                  letterSpacing: 0.5),
                             )),
                       ],
                     ),
@@ -1070,13 +1253,22 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                       'Receiver Name',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff000000), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                      style: TextStyle(
+                          color: isDarkMode(context)
+                              ? Color(0xffFFFFFF)
+                              : Color(0xff000000),
+                          fontFamily: AppThemeData.medium,
+                          letterSpacing: 0.5),
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
                         '${currentOrder!.receiver!.name}'.tr(),
-                        style: TextStyle(color: Color(0xff555555), fontSize: 12, fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                        style: TextStyle(
+                            color: Color(0xff555555),
+                            fontSize: 12,
+                            fontFamily: AppThemeData.regular,
+                            letterSpacing: 0.5),
                       ),
                     ),
                     trailing: Column(
@@ -1094,7 +1286,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                               backgroundColor: Color(0xffFFFFFF),
                             ),
                             onPressed: () {
-                              UrlLauncher.launch("tel://${currentOrder!.receiver!.phone}");
+                              UrlLauncher.launch(
+                                  "tel://${currentOrder!.receiver!.phone}");
                             },
                             icon: Image.asset(
                               'assets/images/call3x.png',
@@ -1103,7 +1296,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             ),
                             label: Text(
                               "CALL".tr(),
-                              style: TextStyle(color: Color(0xff3DAE7D), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  color: Color(0xff3DAE7D),
+                                  fontFamily: AppThemeData.medium,
+                                  letterSpacing: 0.5),
                             )),
                       ],
                     ),
@@ -1119,7 +1315,12 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                       '${currentOrder!.author!.fullName()}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff000000), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                      style: TextStyle(
+                          color: isDarkMode(context)
+                              ? Color(0xffFFFFFF)
+                              : Color(0xff000000),
+                          fontFamily: AppThemeData.medium,
+                          letterSpacing: 0.5),
                     ),
                     subtitle: Row(
                       children: [
@@ -1127,7 +1328,11 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
                             'ORDER ID '.tr(),
-                            style: TextStyle(color: Color(0xff555555), fontSize: 12, fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                            style: TextStyle(
+                                color: Color(0xff555555),
+                                fontSize: 12,
+                                fontFamily: AppThemeData.regular,
+                                letterSpacing: 0.5),
                           ),
                         ),
                         Padding(
@@ -1138,7 +1343,13 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                               '${currentOrder!.id} ',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff000000), fontSize: 12, fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  color: isDarkMode(context)
+                                      ? Color(0xffFFFFFF)
+                                      : Color(0xff000000),
+                                  fontSize: 12,
+                                  fontFamily: AppThemeData.regular,
+                                  letterSpacing: 0.5),
                             ),
                           ),
                         ),
@@ -1159,7 +1370,8 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                               backgroundColor: Color(0xffFFFFFF),
                             ),
                             onPressed: () {
-                              UrlLauncher.launch("tel://${currentOrder!.author!.phoneNumber}");
+                              UrlLauncher.launch(
+                                  "tel://${currentOrder!.author!.phoneNumber}");
                             },
                             icon: Image.asset(
                               'assets/images/call3x.png',
@@ -1168,7 +1380,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             ),
                             label: Text(
                               "CALL".tr(),
-                              style: TextStyle(color: Color(0xff3DAE7D), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  color: Color(0xff3DAE7D),
+                                  fontFamily: AppThemeData.medium,
+                                  letterSpacing: 0.5),
                             )),
                       ],
                     ),
@@ -1182,7 +1397,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                     ),
                     title: Text(
                       'Destination'.tr(),
-                      style: TextStyle(color: Color(0xff9091A4), fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                      style: TextStyle(
+                          color: Color(0xff9091A4),
+                          fontFamily: AppThemeData.regular,
+                          letterSpacing: 0.5),
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4.0),
@@ -1190,7 +1408,12 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                         '${currentOrder!.receiver!.address}',
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: isDarkMode(context) ? Color(0xffFFFFFF) : Color(0xff333333), fontFamily: AppThemeData.regular, letterSpacing: 0.5),
+                        style: TextStyle(
+                            color: isDarkMode(context)
+                                ? Color(0xffFFFFFF)
+                                : Color(0xff333333),
+                            fontFamily: AppThemeData.regular,
+                            letterSpacing: 0.5),
                       ),
                     ),
                     trailing: Column(
@@ -1220,7 +1443,10 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             // ),
                             label: Text(
                               "Message".tr(),
-                              style: TextStyle(color: Color(0xff3DAE7D), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  color: Color(0xff3DAE7D),
+                                  fontFamily: AppThemeData.medium,
+                                  letterSpacing: 0.5),
                             )),
                       ],
                     ),
@@ -1247,15 +1473,21 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                             backgroundColor: Color(COLOR_PRIMARY),
                           ),
                           onPressed: () async {
-                            if (currentOrder!.status == ORDER_STATUS_SHIPPED || currentOrder!.status == ORDER_STATUS_DRIVER_ACCEPTED) {
+                            if (currentOrder!.status == ORDER_STATUS_SHIPPED ||
+                                currentOrder!.status ==
+                                    ORDER_STATUS_DRIVER_ACCEPTED) {
                               completePickUp();
-                            } else if (currentOrder!.status == ORDER_STATUS_IN_TRANSIT) {
+                            } else if (currentOrder!.status ==
+                                ORDER_STATUS_IN_TRANSIT) {
                               completeOrder();
                             }
                           },
                           child: Text(
                             buttonText ?? "",
-                            style: TextStyle(color: Color(0xffFFFFFF), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                            style: TextStyle(
+                                color: Color(0xffFFFFFF),
+                                fontFamily: AppThemeData.medium,
+                                letterSpacing: 0.5),
                           ),
                         ),
                       ),
@@ -1277,15 +1509,21 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
                           backgroundColor: Color(COLOR_PRIMARY),
                         ),
                         onPressed: () async {
-                          if (currentOrder!.status == ORDER_STATUS_SHIPPED || currentOrder!.status == ORDER_STATUS_DRIVER_ACCEPTED) {
+                          if (currentOrder!.status == ORDER_STATUS_SHIPPED ||
+                              currentOrder!.status ==
+                                  ORDER_STATUS_DRIVER_ACCEPTED) {
                             completePickUp();
-                          } else if (currentOrder!.status == ORDER_STATUS_IN_TRANSIT) {
+                          } else if (currentOrder!.status ==
+                              ORDER_STATUS_IN_TRANSIT) {
                             completeOrder();
                           }
                         },
                         child: Text(
                           buttonText ?? "",
-                          style: TextStyle(color: Color(0xffFFFFFF), fontFamily: AppThemeData.medium, letterSpacing: 0.5),
+                          style: TextStyle(
+                              color: Color(0xffFFFFFF),
+                              fontFamily: AppThemeData.medium,
+                              letterSpacing: 0.5),
                         ),
                       ),
                     ),
@@ -1297,7 +1535,9 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
   }
 
   completePickUp() async {
-    final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => ParcelImagesShow(images: currentOrder!.parcelImages!)));
+    final result = await Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) =>
+            ParcelImagesShow(images: currentOrder!.parcelImages!)));
 
     if (result != null) {
       if (result == "pickup") {
@@ -1326,11 +1566,18 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
 
           if (currentOrder!.taxModel != null) {
             for (var element in currentOrder!.taxModel!) {
-              totalTax = totalTax + calculateTax(amount: (double.parse(currentOrder!.subTotal!.toString()) - double.parse(currentOrder!.discount!.toString())).toString(), taxModel: element);
+              totalTax = totalTax +
+                  calculateTax(
+                      amount: (double.parse(
+                                  currentOrder!.subTotal!.toString()) -
+                              double.parse(currentOrder!.discount!.toString()))
+                          .toString(),
+                      taxModel: element);
             }
           }
 
-          double subTotal = double.parse(currentOrder!.subTotal.toString()) - double.parse(currentOrder!.discount.toString());
+          double subTotal = double.parse(currentOrder!.subTotal.toString()) -
+              double.parse(currentOrder!.discount.toString());
 
           double userAmount = 0;
 
@@ -1340,19 +1587,36 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
 
           await FireStoreUtils.createPaymentId().then((value) async {
             final paymentID = value;
-            await FireStoreUtils.topUpWalletAmount(userID: currentOrder!.authorID, paymentMethod: "Refund Amount", amount: userAmount, id: paymentID).then((value) async {
-              await FireStoreUtils.updateUserWalletAmount(userId: currentOrder!.authorID, amount: userAmount).then((value) {});
+            await FireStoreUtils.topUpWalletAmount(
+                    userID: currentOrder!.authorID,
+                    paymentMethod: "Refund Amount",
+                    amount: userAmount,
+                    id: paymentID)
+                .then((value) async {
+              await FireStoreUtils.updateUserWalletAmount(
+                      userId: currentOrder!.authorID, amount: userAmount)
+                  .then((value) {});
             });
           });
         }
 
         Position? locationData = await getCurrentLocation();
-        Map<String, dynamic> payLoad = <String, dynamic>{"type": "parcel_order", "orderId": currentOrder!.id};
-        await SendNotification.sendFcmMessage(parcelRejected, currentOrder!.author!.fcmToken, payLoad);
+        Map<String, dynamic> payLoad = <String, dynamic>{
+          "type": "parcel_order",
+          "orderId": currentOrder!.id
+        };
+        await SendNotification.sendFcmMessage(
+            parcelRejected, currentOrder!.author!.fcmToken, payLoad);
 
-        MyAppState.currentUser!.location = UserLocation(latitude: locationData.latitude, longitude: locationData.longitude);
-        MyAppState.currentUser!.geoFireData =
-            GeoFireData(geohash: Geoflutterfire().point(latitude: locationData.latitude, longitude: locationData.longitude).hash, geoPoint: GeoPoint(locationData.latitude, locationData.longitude));
+        MyAppState.currentUser!.location = UserLocation(
+            latitude: locationData.latitude, longitude: locationData.longitude);
+        MyAppState.currentUser!.geoFireData = GeoFireData(
+            geohash: Geoflutterfire()
+                .point(
+                    latitude: locationData.latitude,
+                    longitude: locationData.longitude)
+                .hash,
+            geoPoint: GeoPoint(locationData.latitude, locationData.longitude));
         MyAppState.currentUser!.inProgressOrderID = null;
         currentOrder = null;
         await FireStoreUtils.updateCurrentUser(MyAppState.currentUser!);
@@ -1371,7 +1635,9 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
 
         _mapController?.moveCamera(
           CameraUpdate.newCameraPosition(
-            CameraPosition(target: LatLng(locationData.latitude, locationData.longitude), zoom: 15),
+            CameraPosition(
+                target: LatLng(locationData.latitude, locationData.longitude),
+                zoom: 15),
           ),
         );
 
@@ -1387,17 +1653,28 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
     updateParcelWalletAmount(currentOrder!);
     await FireStoreUtils.updateParcelOrder(currentOrder!);
     Position? locationData = await getCurrentLocation();
-    Map<String, dynamic> payLoad = <String, dynamic>{"type": "parcel_order", "orderId": currentOrder!.id};
-    await SendNotification.sendFcmMessage(parcelCompleted, currentOrder!.author!.fcmToken, payLoad);
-    await FireStoreUtils.getParcelFirstOrderOrNOt(currentOrder!).then((value) async {
+    Map<String, dynamic> payLoad = <String, dynamic>{
+      "type": "parcel_order",
+      "orderId": currentOrder!.id
+    };
+    await SendNotification.sendFcmMessage(
+        parcelCompleted, currentOrder!.author!.fcmToken, payLoad);
+    await FireStoreUtils.getParcelFirstOrderOrNOt(currentOrder!)
+        .then((value) async {
       if (value == true) {
         await FireStoreUtils.updateParcelReferralAmount(currentOrder!);
       }
     });
     _driverModel!.inProgressOrderID = null;
-    _driverModel!.location = UserLocation(latitude: locationData.latitude, longitude: locationData.longitude);
-    _driverModel!.geoFireData =
-        GeoFireData(geohash: Geoflutterfire().point(latitude: locationData.latitude, longitude: locationData.longitude).hash, geoPoint: GeoPoint(locationData.latitude, locationData.longitude));
+    _driverModel!.location = UserLocation(
+        latitude: locationData.latitude, longitude: locationData.longitude);
+    _driverModel!.geoFireData = GeoFireData(
+        geohash: Geoflutterfire()
+            .point(
+                latitude: locationData.latitude,
+                longitude: locationData.longitude)
+            .hash,
+        geoPoint: GeoPoint(locationData.latitude, locationData.longitude));
 
     currentOrder = null;
     await FireStoreUtils.updateCurrentUser(_driverModel!);
@@ -1417,7 +1694,9 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
 
     _mapController?.moveCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(target: LatLng(locationData.latitude, locationData.longitude), zoom: 15),
+        CameraPosition(
+            target: LatLng(locationData.latitude, locationData.longitude),
+            zoom: 15),
       ),
     );
     setState(() {});
@@ -1426,10 +1705,12 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
   openChatWithCustomer() async {
     await showProgress(context, "Please wait".tr(), false);
 
-    User? customer = await FireStoreUtils.getCurrentUser(currentOrder!.authorID);
+    User? customer =
+        await FireStoreUtils.getCurrentUser(currentOrder!.authorID);
     print(currentOrder!.driverID);
 
-    User? driver = await FireStoreUtils.getCurrentUser(currentOrder!.driverID.toString());
+    User? driver =
+        await FireStoreUtils.getCurrentUser(currentOrder!.driverID.toString());
 
     await hideProgress();
     push(
@@ -1453,9 +1734,15 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
     Position locationData = await getCurrentLocation();
     print('HomeScreenState.goOnline');
     user.isActive = true;
-    user.location = UserLocation(latitude: locationData.latitude, longitude: locationData.longitude);
-    user.geoFireData =
-        GeoFireData(geohash: Geoflutterfire().point(latitude: locationData.latitude, longitude: locationData.longitude).hash, geoPoint: GeoPoint(locationData.latitude, locationData.longitude));
+    user.location = UserLocation(
+        latitude: locationData.latitude, longitude: locationData.longitude);
+    user.geoFireData = GeoFireData(
+        geohash: Geoflutterfire()
+            .point(
+                latitude: locationData.latitude,
+                longitude: locationData.longitude)
+            .hash,
+        geoPoint: GeoPoint(locationData.latitude, locationData.longitude));
     MyAppState.currentUser = user;
     await FireStoreUtils.updateCurrentUser(user);
     updateDriverOrder();
@@ -1476,15 +1763,20 @@ class _ParcelHomeScreenState extends State<ParcelHomeScreen> with SingleTickerPr
   bool isPlaying = false;
 
   playSound() async {
-    final path = await rootBundle.load("assets/audio/mixkit-happy-bells-notification-937.mp3");
+    final path = await rootBundle
+        .load("assets/audio/mixkit-happy-bells-notification-937.mp3");
     audioPlayer.setSourceBytes(path.buffer.asUint8List());
     audioPlayer.setReleaseMode(ReleaseMode.loop);
     //audioPlayer.setSourceUrl(url);
     audioPlayer.play(BytesSource(path.buffer.asUint8List()),
         volume: 15,
         ctx: AudioContext(
-            android:
-                AudioContextAndroid(contentType: AndroidContentType.music, isSpeakerphoneOn: true, stayAwake: true, usageType: AndroidUsageType.alarm, audioFocus: AndroidAudioFocus.gainTransient),
+            android: AudioContextAndroid(
+                contentType: AndroidContentType.music,
+                isSpeakerphoneOn: true,
+                stayAwake: true,
+                usageType: AndroidUsageType.alarm,
+                audioFocus: AndroidAudioFocus.gainTransient),
             iOS: AudioContextIOS(category: AVAudioSessionCategory.playback)));
   }
 }

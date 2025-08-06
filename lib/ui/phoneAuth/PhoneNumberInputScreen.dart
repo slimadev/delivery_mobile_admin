@@ -17,14 +17,20 @@ import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/services/show_toast_dialog.dart';
 import 'package:emartdriver/ui/auth/AuthScreen.dart';
 import 'package:emartdriver/ui/container/ContainerScreen.dart';
+import 'package:emartdriver/ui/signUp/PreSignUp.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:emartdriver/theme/app_them_data.dart';
+import 'package:emartdriver/ui/termsAndCondition/terms_and_codition.dart';
+import 'package:emartdriver/ui/privacy_policy/privacy_policy.dart';
+import 'package:flutter/gestures.dart';
 
 import '../../model/User.dart';
+import '../../model/Vehicle_Types.dart';
 
 File? _image;
 File? _carImage;
@@ -32,7 +38,8 @@ File? _carImage;
 class PhoneNumberInputScreen extends StatefulWidget {
   final bool login;
 
-  const PhoneNumberInputScreen({Key? key, required this.login}) : super(key: key);
+  const PhoneNumberInputScreen({Key? key, required this.login})
+      : super(key: key);
 
   @override
   _PhoneNumberInputScreenState createState() => _PhoneNumberInputScreenState();
@@ -41,11 +48,13 @@ class PhoneNumberInputScreen extends StatefulWidget {
 class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
   final ImagePicker _imagePicker = ImagePicker();
   TextEditingController _firstNameController = TextEditingController();
+  TextEditingController _fullNameController = TextEditingController();
   TextEditingController _lastNameController = TextEditingController();
   TextEditingController _carNameController = TextEditingController();
+  TextEditingController _carMakeController = TextEditingController();
   TextEditingController _carPlateController = TextEditingController();
   TextEditingController _carColorController = TextEditingController();
-
+  TextEditingController _vehicleController = TextEditingController();
   TextEditingController _emailController = TextEditingController();
   TextEditingController _mobileController = TextEditingController();
   GlobalKey<FormState> _deliveryKey = GlobalKey();
@@ -53,32 +62,50 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
   GlobalKey<FormState> _parcelServiceKey = GlobalKey();
   GlobalKey<FormState> _rentalServiceKey = GlobalKey();
   bool isUserImage = true;
+  bool _consentChecked = false;
+  bool _termsAccepted = false;
   AutovalidateMode _validate = AutovalidateMode.disabled;
 
   // TextEditingController _companyNameController = TextEditingController();
   // TextEditingController _companyAddressController = TextEditingController();
 
-  List<String> _locations = ['Delivery service', 'Cab service', 'Parcel service', 'Rental Service']; // Option 2
+  List<String> _locations = [
+    'Delivery service',
+    'Cab service',
+    'Parcel service',
+    'Rental Service'
+  ]; // Option 2
   String? _selectedServiceType;
 
   @override
   void initState() {
     getCarMakes();
+    getVehicles();
     super.initState();
   } // Option 2
 
+  List<VehicleTypes> vehiclesList = [];
   List<CarMakes> carMakesList = [];
   List<CarModel> carModelList = [];
-  List<VehicleType> vehicleType = [];
+
   CarMakes? selectedCarMakes;
   CarModel? selectedCarModel;
-  VehicleType? selectedVehicleType;
-
+  VehicleTypes? selectedVehicle;
+  List<VehicleType> vehicleType = [];
   List<VehicleType> rentalVehicleType = [];
   VehicleType? selectedRentalVehicleType;
+  VehicleType? selectedVehicleType;
 
   List<SectionModel>? sectionsVal = [];
   SectionModel? selectedSection;
+
+  getVehicles() async {
+    await FireStoreUtils.getVehicles().then((value) {
+      setState(() {
+        vehiclesList = value;
+      });
+    });
+  }
 
   getCarMakes() async {
     await FireStoreUtils.getCarMakes().then((value) {
@@ -112,249 +139,311 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
       retrieveLostData();
     }
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0.0,
-        backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: isDarkMode(context) ? Colors.white : Colors.black),
-      ),
+      appBar: (!widget.login)
+          ? null // Não mostra AppBar se não enviou código
+          : AppBar(
+              elevation: 0.0,
+              backgroundColor: Colors.transparent,
+              iconTheme: IconThemeData(
+                  color: isDarkMode(context) ? Colors.white : Colors.black),
+            ),
       body: SingleChildScrollView(
         child: Container(
-          margin: EdgeInsets.only(left: 16.0, right: 16, bottom: 16),
+          // decoration: BoxDecoration(
+          //   color: AppThemeData.lightgrey.withOpacity(0.7),
+          //   borderRadius: BorderRadius.circular(25.0),
+          // ),
+          margin: EdgeInsets.only(left: 24.0, right: 16, bottom: 24),
           child: Column(
             children: [
-              Align(
-                  alignment: Directionality.of(context) == TextDirection.ltr ? Alignment.topLeft : Alignment.topRight,
-                  child: Text(
-                    widget.login ? 'Sign In'.tr() : 'Create new account'.tr(),
-                    style: TextStyle(color: Color(COLOR_PRIMARY), fontWeight: FontWeight.bold, fontSize: 25.0),
-                  ).tr()),
-              !_codeSent && widget.login
-                  ? Column(
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), shape: BoxShape.rectangle, border: Border.all(color: Colors.grey.shade200)),
-                            child: InternationalPhoneNumberInput(
-                              onInputChanged: (PhoneNumber number) => _mobileController.text = number.phoneNumber.toString(),
-                              ignoreBlank: true,
-                              autoValidateMode: AutovalidateMode.onUserInteraction,
-                              inputDecoration: InputDecoration(
-                                hintText: 'Phone Number'.tr(),
-                                border: OutlineInputBorder(
-                                  borderSide: BorderSide.none,
-                                ),
-                                isDense: true,
-                                errorBorder: OutlineInputBorder(
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              inputBorder: OutlineInputBorder(
-                                borderSide: BorderSide.none,
-                              ),
-                              selectorConfig: SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
+              SizedBox(height: 40),
+              if (widget.login) ...[
+                !_codeSent
+                    ? Column(
+                        children: [
+                          Container(
+                            height: 280,
+                            width: double.infinity,
+                            child: Image.asset(
+                              'assets/images/delivery1.png',
+                              fit: BoxFit.cover,
                             ),
                           ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppThemeData.lightgrey.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                      top: 16.0, right: 8.0, left: 8.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            left: 4.0, bottom: 8.0),
+                                        child: Text(
+                                          'Enter your phone number'.tr(),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppThemeData.newBlack,
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 16),
+                                        decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            shape: BoxShape.rectangle,
+                                            color: Colors.white,
+                                            border: Border.all(
+                                                color: Colors.grey.shade200)),
+                                        child: InternationalPhoneNumberInput(
+                                          onInputChanged:
+                                              (PhoneNumber number) =>
+                                                  _mobileController.text =
+                                                      number.phoneNumber
+                                                          .toString(),
+                                          ignoreBlank: true,
+                                          autoValidateMode: AutovalidateMode
+                                              .onUserInteraction,
+                                          inputDecoration: InputDecoration(
+                                            hintText: 'Phone Number'.tr(),
+                                            border: OutlineInputBorder(
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            isDense: true,
+                                            errorBorder: OutlineInputBorder(
+                                              borderSide: BorderSide.none,
+                                            ),
+                                          ),
+                                          inputBorder: OutlineInputBorder(
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          selectorConfig: SelectorConfig(
+                                              selectorType:
+                                                  PhoneInputSelectorType
+                                                      .DIALOG),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      right: 40.0,
+                                      left: 40.0,
+                                      top: 40.0,
+                                      bottom: 40),
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                        minWidth: double.infinity),
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Color(COLOR_PRIMARY),
+                                        padding: EdgeInsets.only(
+                                            top: 12, bottom: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10.0),
+                                          side: BorderSide(
+                                            color: Color(COLOR_PRIMARY),
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Login'.tr(),
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDarkMode(context)
+                                              ? Colors.black
+                                              : Colors.white,
+                                        ),
+                                      ),
+                                      onPressed: () => _signUp(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        ],
+                      )
+                    : Container(),
+              ] else ...[
+                if (!_codeSent)
+                  Center(
+                    child: Container(
+                      constraints: BoxConstraints(maxWidth: 500),
+                      child: Form(
+                        key: _deliveryKey,
+                        autovalidateMode: _validate,
+                        child: formUI(),
+                      ),
+                    ),
+                  ),
+                if (!_codeSent)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                        right: 24.0, left: 24.0, top: 16.0),
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(minWidth: double.infinity),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppThemeData.newBlack,
+                          padding: EdgeInsets.only(top: 12, bottom: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                            // side: BorderSide(
+                            //   color: Color(COLOR_PRIMARY),
+                            // ),
+                          ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(right: 40.0, left: 40.0, top: 40.0),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(minWidth: double.infinity),
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(COLOR_PRIMARY),
-                                padding: EdgeInsets.only(top: 12, bottom: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(25.0),
-                                  side: BorderSide(
+                        child: Text(
+                          'Already have an Account'.tr(),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w400,
+                            color: isDarkMode(context)
+                                ? Colors.black
+                                : Colors.white,
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    PhoneNumberInputScreen(login: true)),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+              ],
+              if (_codeSent) ...[
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 40.0, bottom: 40.0),
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(20.0),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(
+                          color: Colors.grey[300]!,
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Center(
+                            child: Image.asset(
+                              'assets/images/app_logo.png',
+                              height: 80,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Enter verification code'.tr(),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(COLOR_PRIMARY),
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'We have sent a 6-digit verification code to your phone number'
+                                .tr(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Please enter the code below to verify your phone number'
+                                .tr(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 20),
+                          PinCodeTextField(
+                            length: 6,
+                            appContext: context,
+                            keyboardType: TextInputType.phone,
+                            backgroundColor: Colors.transparent,
+                            pinTheme: PinTheme(
+                                shape: PinCodeFieldShape.box,
+                                borderRadius: BorderRadius.circular(5),
+                                fieldHeight: 40,
+                                fieldWidth: 40,
+                                activeColor: Color(COLOR_PRIMARY),
+                                activeFillColor: isDarkMode(context)
+                                    ? Colors.grey.shade700
+                                    : Colors.grey.shade100,
+                                selectedFillColor: Colors.transparent,
+                                selectedColor: Color(COLOR_PRIMARY),
+                                inactiveColor: Colors.grey.shade600,
+                                inactiveFillColor: Colors.transparent),
+                            enableActiveFill: true,
+                            onCompleted: (v) {
+                              _submitCode(v);
+                            },
+                            onChanged: (value) {
+                              print(value);
+                            },
+                          ),
+                          SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "Didn't receive the code? ".tr(),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  // Resend code functionality
+                                  _submitPhoneNumber();
+                                },
+                                child: Text(
+                                  'Resend'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
                                     color: Color(COLOR_PRIMARY),
                                   ),
                                 ),
                               ),
-                              child: Text(
-                                widget.login ? 'Login'.tr() : 'Sign Up'.tr(),
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDarkMode(context) ? Colors.black : Colors.white,
-                                ),
-                              ),
-                              onPressed: () => _signUp(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Container(),
-              _codeSent
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 20.0),
-                      child: PinCodeTextField(
-                        length: 6,
-                        appContext: context,
-                        keyboardType: TextInputType.phone,
-                        backgroundColor: Colors.transparent,
-                        pinTheme: PinTheme(
-                            shape: PinCodeFieldShape.box,
-                            borderRadius: BorderRadius.circular(5),
-                            fieldHeight: 40,
-                            fieldWidth: 40,
-                            activeColor: Color(COLOR_PRIMARY),
-                            activeFillColor: isDarkMode(context) ? Colors.grey.shade700 : Colors.grey.shade100,
-                            selectedFillColor: Colors.transparent,
-                            selectedColor: Color(COLOR_PRIMARY),
-                            inactiveColor: Colors.grey.shade600,
-                            inactiveFillColor: Colors.transparent),
-                        enableActiveFill: true,
-                        onCompleted: (v) {
-                          _submitCode(v);
-                        },
-                        onChanged: (value) {
-                          print(value);
-                        },
-                      ),
-                    )
-                  : Container(),
-              Visibility(
-                visible: !widget.login && !_codeSent,
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0, top: 32, right: 8, bottom: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Stack(
-                            alignment: Alignment.bottomCenter,
-                            children: <Widget>[
-                              CircleAvatar(
-                                radius: 65,
-                                backgroundColor: Colors.grey.shade400,
-                                child: ClipOval(
-                                  child: SizedBox(
-                                    width: 170,
-                                    height: 170,
-                                    child: _image == null
-                                        ? Image.asset(
-                                            'assets/images/placeholder.jpg',
-                                            fit: BoxFit.cover,
-                                          )
-                                        : Image.file(
-                                            _image!,
-                                            fit: BoxFit.cover,
-                                          ),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: 80,
-                                right: 0,
-                                child: FloatingActionButton(
-                                  heroTag: 'profileImage',
-                                  backgroundColor: Color(COLOR_ACCENT),
-                                  child: Icon(
-                                    CupertinoIcons.camera,
-                                    color: isDarkMode(context) ? Colors.black : Colors.white,
-                                  ),
-                                  mini: true,
-                                  onPressed: () => _onCameraClick(true),
-                                ),
-                              )
-                            ],
-                          ),
-                          Stack(
-                            alignment: Alignment.bottomCenter,
-                            children: <Widget>[
-                              CircleAvatar(
-                                radius: 65,
-                                backgroundColor: Colors.grey.shade400,
-                                child: ClipOval(
-                                  child: SizedBox(
-                                    width: 170,
-                                    height: 170,
-                                    child: _carImage == null
-                                        ? Image.asset(
-                                            'assets/images/car_default_image.png',
-                                            fit: BoxFit.cover,
-                                          )
-                                        : Image.file(
-                                            _carImage!,
-                                            fit: BoxFit.cover,
-                                          ),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: 80,
-                                right: 0,
-                                child: FloatingActionButton(
-                                  heroTag: 'carImage',
-                                  backgroundColor: Color(COLOR_ACCENT),
-                                  child: Icon(
-                                    CupertinoIcons.camera,
-                                    color: isDarkMode(context) ? Colors.black : Colors.white,
-                                  ),
-                                  mini: true,
-                                  onPressed: () => _onCameraClick(false),
-                                ),
-                              )
                             ],
                           ),
                         ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                      child: DropdownButtonFormField(
-                        hint: Text('Please choose a service type.'.tr()),
-                        // Not necessary for Option 1
-                        value: _selectedServiceType,
-                        onChanged: (newValue) {
-                          setState(() {
-                            _selectedServiceType = newValue.toString();
-                          });
-                        },
-                        decoration: InputDecoration(
-                          contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                        ),
-                        items: _locations.map((location) {
-                          return DropdownMenuItem(
-                            child: new Text(location),
-                            value: location,
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    _selectedServiceType == "Delivery service"
-                        ? Form(
-                            key: _deliveryKey,
-                            autovalidateMode: _validate,
-                            child: formUI(),
-                          )
-                        : _selectedServiceType == "Parcel service"
-                            ? Form(
-                                key: _parcelServiceKey,
-                                autovalidateMode: _validate,
-                                child: formParcelServiceUI(),
-                              )
-                            : _selectedServiceType == "Rental Service"
-                                ? Form(
-                                    key: _rentalServiceKey,
-                                    autovalidateMode: _validate,
-                                    child: formRentalServiceUI(),
-                                  )
-                                : _selectedServiceType == "Cab service"
-                                    ? Form(
-                                        key: _cabServiceKey,
-                                        autovalidateMode: _validate,
-                                        child: formCabServiceUI(),
-                                      )
-                                    : Container(),
-                  ],
+                  ),
                 ),
-              )
+              ],
             ],
           ),
         ),
@@ -363,46 +452,64 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
   }
 
   _submitCode(String code) async {
-    ShowToastDialog.showLoader("Please wait");
-    auth.AuthCredential authCredential = auth.PhoneAuthProvider.credential(verificationId: _verificationID, smsCode: code);
+    ShowToastDialog.showLoader("Please wait".tr());
+    auth.AuthCredential authCredential = auth.PhoneAuthProvider.credential(
+        verificationId: _verificationID, smsCode: code);
 
     try {
       // Sign the user in (or link) with the credential
-      auth.UserCredential userCredential = await auth.FirebaseAuth.instance.signInWithCredential(authCredential);
-      User? user = await FireStoreUtils.getCurrentUser(userCredential.user?.uid ?? '');
+      auth.UserCredential userCredential =
+          await auth.FirebaseAuth.instance.signInWithCredential(authCredential);
+      User? user =
+          await FireStoreUtils.getCurrentUser(userCredential.user?.uid ?? '');
+
+      print("DEBUGGGG user active? ${user!.active}");
       if (user == null) {
         ShowToastDialog.closeLoader();
-        if (_selectedServiceType == "Delivery service") {
-          _deliveryService(userCredential.user!.uid);
-        } else if (_selectedServiceType == "Parcel service") {
-          _parcelService(userCredential.user!.uid);
-        } else if (_selectedServiceType == "Rental Service") {
-          _rentalService(userCredential.user!.uid);
-        } else {
-          _cabService(userCredential.user!.uid);
-        }
+        _deliveryService(userCredential.user!.uid);
       } else {
-        if (user.active) {
-          ShowToastDialog.closeLoader();
-          await FireStoreUtils.updateCurrentUser(user);
-          MyAppState.currentUser = user;
-          if (user.serviceType == "cab-service") {
-            pushAndRemoveUntil(
-                context,
-                DashBoardCabService(
-                  user: user,
-                ),
-                false);
-          } else if (user.serviceType == "parcel_delivery") {
-            pushAndRemoveUntil(context, ParcelServiceDashBoard(user: user), false);
-          } else if (user.serviceType == "rental-service") {
-            pushAndRemoveUntil(context, RentalServiceDashBoard(user: user), false);
+        ShowToastDialog.closeLoader();
+
+        // Verifica se o usuário tem role de driver
+        if (user.role == USER_ROLE_DRIVER) {
+          // Verifica se o usuário está ativo
+          if (user.active) {
+            // Verifica se o usuário está pronto (isReady)
+            if (user.isReady) {
+              await FireStoreUtils.updateCurrentUser(user);
+              MyAppState.currentUser = user;
+              pushAndRemoveUntil(context, ContainerScreen(user: user), false);
+            } else {
+              // Usuário é driver mas não está pronto
+              MyAppState.currentUser = user;
+
+              pushAndRemoveUntil(
+                  context, PreSignUpScreen(waiting: true), false);
+            }
           } else {
-            pushAndRemoveUntil(context, ContainerScreen(user: user), false);
+            // Usuário não está ativo
+            MyAppState.currentUser = user;
+            showAlertDialog(
+                context,
+                "Couldn't Log In".tr(),
+                'Driver is not activated yet. Please contact to admin to activate it. Thanks.'
+                    .tr(),
+                true);
+            // pushAndRemoveUntil(
+            //     context,
+            //     PhoneNumberInputScreen(
+            //       login: true,
+            //     ),
+            //     false);
           }
         } else {
-          ShowToastDialog.closeLoader();
-          showAlertDialog(context, "Couldn't Log In".tr(), 'Driver is not activated yet. Please contact to admin to activate it. Thanks.'.tr(), true);
+          // Usuário existe mas não é driver
+          showAlertDialog(
+              context,
+              "Phone Number Already Registered".tr(),
+              'This phone number is already registered with a different account type.'
+                  .tr(),
+              true);
         }
       }
     } on auth.FirebaseAuthException catch (e) {
@@ -445,14 +552,16 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           onPressed: () async {
             Navigator.pop(context);
             if (isDriver) {
-              XFile? singleImage = await ImagePicker().pickImage(source: ImageSource.gallery);
+              XFile? singleImage =
+                  await ImagePicker().pickImage(source: ImageSource.gallery);
               if (singleImage != null) {
                 setState(() {
                   _driverProofPictureURLFile = File(singleImage.path);
                 });
               }
             } else {
-              XFile? singleImage = await ImagePicker().pickImage(source: ImageSource.gallery);
+              XFile? singleImage =
+                  await ImagePicker().pickImage(source: ImageSource.gallery);
               if (singleImage != null) {
                 setState(() {
                   _carProofPictureFile = File(singleImage.path);
@@ -467,14 +576,16 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           onPressed: () async {
             Navigator.pop(context);
             if (isDriver) {
-              final XFile? singleImage = await ImagePicker().pickImage(source: ImageSource.camera);
+              final XFile? singleImage =
+                  await ImagePicker().pickImage(source: ImageSource.camera);
               if (singleImage != null) {
                 setState(() {
                   _driverProofPictureURLFile = File(singleImage.path);
                 });
               }
             } else {
-              final XFile? singleImage = await ImagePicker().pickImage(source: ImageSource.camera);
+              final XFile? singleImage =
+                  await ImagePicker().pickImage(source: ImageSource.camera);
               if (singleImage != null) {
                 setState(() {
                   _carProofPictureFile = File(singleImage.path);
@@ -510,10 +621,13 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           isDefaultAction: false,
           onPressed: () async {
             Navigator.pop(context);
-            XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
+            XFile? image =
+                await _imagePicker.pickImage(source: ImageSource.gallery);
             if (image != null)
               setState(() {
-                isUserImage ? _image = File(image.path) : _carImage = File(image.path);
+                isUserImage
+                    ? _image = File(image.path)
+                    : _carImage = File(image.path);
               });
           },
         ),
@@ -522,10 +636,13 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           isDestructiveAction: false,
           onPressed: () async {
             Navigator.pop(context);
-            XFile? image = await _imagePicker.pickImage(source: ImageSource.camera);
+            XFile? image =
+                await _imagePicker.pickImage(source: ImageSource.camera);
             if (image != null)
               setState(() {
-                isUserImage ? _image = File(image.path) : _carImage = File(image.path);
+                isUserImage
+                    ? _image = File(image.path)
+                    : _carImage = File(image.path);
               });
           },
         ),
@@ -552,337 +669,538 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
 
   Widget formUI() {
     return Column(
-      children: <Widget>[
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _firstNameController,
-              cursorColor: Color(COLOR_PRIMARY),
-              textAlignVertical: TextAlignVertical.center,
-              validator: validateName,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: easyLocal.tr('First Name'),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
+      children: [
+        Image.asset(
+          'assets/images/app_logo.png',
+          height: MediaQuery.of(context).size.height * 0.13,
+          width: MediaQuery.of(context).size.width * 0.4,
+          fit: BoxFit.contain,
         ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _lastNameController,
-              validator: validateName,
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: Color(COLOR_PRIMARY),
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Last Name'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+        Container(
+          decoration: BoxDecoration(
+            color: AppThemeData.lightgrey.withOpacity(0.7),
+            borderRadius: BorderRadius.circular(25.0),
           ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _carNameController,
-              validator: validateEmptyField,
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: Color(COLOR_PRIMARY),
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Car Model'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _carPlateController,
-              validator: validateEmptyField,
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: Color(COLOR_PRIMARY),
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Car Plate'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), shape: BoxShape.rectangle, border: Border.all(color: Colors.grey.shade200)),
-            child: InternationalPhoneNumberInput(
-              onInputChanged: (PhoneNumber number) => _mobileController.text = number.phoneNumber.toString(),
-              ignoreBlank: true,
-              autoValidateMode: AutovalidateMode.onUserInteraction,
-              inputDecoration: InputDecoration(
-                hintText: 'Phone Number'.tr(),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-                isDense: true,
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              inputBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-              ),
-              selectorConfig: SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
-            ),
-          ),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: double.infinity),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.next,
-              cursorColor: Color(COLOR_PRIMARY),
-              validator: validateEmail,
-              decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                fillColor: Colors.white,
-                hintText: 'Email Address'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 20),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                  child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      "Pickup Car proof".tr(),
-                      style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600),
+          padding: const EdgeInsets.only(top: 6.0, right: 8.0, left: 8.0),
+          child: Column(
+            children: <Widget>[
+              ConstrainedBox(
+                constraints: BoxConstraints(minWidth: double.infinity),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
+                  child: TextFormField(
+                    controller: _fullNameController,
+                    cursorColor: Color(COLOR_PRIMARY),
+                    textAlignVertical: TextAlignVertical.center,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Full name is required'.tr();
+                      }
+                      if (value.trim().split(' ').length < 2) {
+                        return 'Please enter your full name (first and last name)'
+                            .tr();
+                      }
+                      return null;
+                    },
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      fillColor: Colors.white,
+                      filled: true,
+                      hintText: 'Full Name'.tr(),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                          borderSide: BorderSide(
+                              color: Color(COLOR_PRIMARY), width: 1.0)),
+                      errorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: <Widget>[
-                        SizedBox(
-                          width: 90,
-                          height: 90,
-                          child: _carProofPictureFile == null
-                              ? Image.network(
-                                  placeholderImage,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.file(
-                                  _carProofPictureFile!,
-                                  fit: BoxFit.cover,
-                                ),
-                        ),
-                        Positioned(
-                          left: 55,
-                          right: 0,
-                          child: FloatingActionButton(
-                            heroTag: 'profileImage',
-                            backgroundColor: Color(COLOR_ACCENT),
-                            child: Icon(
-                              CupertinoIcons.camera,
-                              color: isDarkMode(context) ? Colors.black : Colors.white,
+                ),
+              ),
+              ConstrainedBox(
+                constraints: BoxConstraints(minWidth: double.infinity),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
+                  child: FormField<String>(
+                    validator: (value) => _mobileController.text.isEmpty
+                        ? 'Phone number required'.tr()
+                        : null,
+                    builder: (FormFieldState<String> state) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              shape: BoxShape.rectangle,
+                              color: Colors.white,
+                              border: Border.all(
+                                color: state.hasError
+                                    ? Theme.of(context).colorScheme.error
+                                    : Colors.grey.shade200,
+                              ),
                             ),
-                            mini: true,
-                            onPressed: () => _onPickupCarProofAndDriverProof(false),
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                ],
-              )),
-              Expanded(
-                  child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      "Pickup Driver proof",
-                      style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: <Widget>[
-                        SizedBox(
-                          width: 90,
-                          height: 90,
-                          child: _driverProofPictureURLFile == null
-                              ? Image.network(
-                                  placeholderImage,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.file(
-                                  _driverProofPictureURLFile!,
-                                  fit: BoxFit.cover,
-                                ),
-                        ),
-                        Positioned(
-                          left: 55,
-                          right: 0,
-                          child: FloatingActionButton(
-                            heroTag: 'profileImage',
-                            backgroundColor: Color(COLOR_ACCENT),
-                            child: Icon(
-                              CupertinoIcons.camera,
-                              color: isDarkMode(context) ? Colors.black : Colors.white,
+                            child: InternationalPhoneNumberInput(
+                              onInputChanged: (PhoneNumber number) {
+                                _mobileController.text =
+                                    number.phoneNumber.toString();
+                                state.didChange(number
+                                    .phoneNumber); // Atualiza o estado do campo
+                              },
+                              ignoreBlank: true,
+                              autoValidateMode: AutovalidateMode.disabled,
+                              inputDecoration: InputDecoration(
+                                hintText: 'Phone Number'.tr(),
+                                border: OutlineInputBorder(
+                                    borderSide: BorderSide.none),
+                                isDense: true,
+                                errorBorder: OutlineInputBorder(
+                                    borderSide: BorderSide.none),
+                              ),
+                              inputBorder: OutlineInputBorder(
+                                  borderSide: BorderSide.none),
+                              selectorConfig: SelectorConfig(
+                                  selectorType: PhoneInputSelectorType.DIALOG),
                             ),
-                            mini: true,
-                            onPressed: () => _onPickupCarProofAndDriverProof(true),
                           ),
-                        )
-                      ],
+                          if (state.hasError)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(left: 16.0, top: 4.0),
+                              child: Text(
+                                state.errorText!,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: BoxConstraints(minWidth: double.infinity),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
+                  child: TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textAlignVertical: TextAlignVertical.center,
+                    textInputAction: TextInputAction.next,
+                    cursorColor: Color(COLOR_PRIMARY),
+                    validator: validateEmailNull,
+                    decoration: InputDecoration(
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      fillColor: Colors.white,
+                      filled: true,
+                      hintText: 'Email Address'.tr(),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                          borderSide: BorderSide(
+                              color: Color(COLOR_PRIMARY), width: 1.0)),
+                      errorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
                     ),
                   ),
-                ],
-              )),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: BoxConstraints(minWidth: double.infinity),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
+                  child: DropdownButtonFormField<VehicleTypes>(
+                    decoration: InputDecoration(
+                      fillColor: Colors.white,
+                      filled: true,
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        borderSide:
+                            BorderSide(color: Color(COLOR_PRIMARY), width: 1.0),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    validator: (value) =>
+                        value == null ? 'field required'.tr() : null,
+                    value: selectedVehicle,
+                    onChanged: (VehicleTypes? value) async {
+                      setState(() {
+                        selectedVehicle = value;
+                        carMakesList.clear();
+                        selectedCarMakes = null;
+                        carModelList.clear();
+                        selectedCarModel = null;
+                      });
+                      if (value != null) {
+                        try {
+                          await FireStoreUtils.getCarMakes(value.name)
+                              .then((makes) {
+                            setState(() {
+                              carMakesList = makes;
+                            });
+                          });
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Error loading brands: $e'.tr())),
+                          );
+                        }
+                      }
+                    },
+                    hint: Text('Select Vehicle Type'.tr()),
+                    items: vehiclesList.map((VehicleTypes item) {
+                      return DropdownMenuItem<VehicleTypes>(
+                        child: Text(item.name.toString()),
+                        value: item,
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: BoxConstraints(minWidth: double.infinity),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
+                  child: DropdownButtonFormField<CarMakes>(
+                    decoration: InputDecoration(
+                      fillColor: Colors.white,
+                      filled: true,
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        borderSide:
+                            BorderSide(color: Color(COLOR_PRIMARY), width: 1.0),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    validator: (value) =>
+                        value == null ? 'field required'.tr() : null,
+                    value: selectedCarMakes,
+                    onChanged: (CarMakes? value) async {
+                      setState(() {
+                        selectedCarMakes = value;
+                        carModelList.clear();
+                        selectedCarModel = null;
+                      });
+                      if (value != null && value.name != null) {
+                        try {
+                          await FireStoreUtils.getCarModel(context, value.name!)
+                              .then((models) {
+                            setState(() {
+                              carModelList = models;
+                            });
+                          });
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Error loading models: $e'.tr())),
+                          );
+                        }
+                      }
+                    },
+                    hint: Text('Select Vehicle Brand'.tr()),
+                    items: carMakesList.map((CarMakes item) {
+                      return DropdownMenuItem<CarMakes>(
+                        child: Text(item.name.toString()),
+                        value: item,
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: BoxConstraints(minWidth: double.infinity),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
+                  child: DropdownButtonFormField<CarModel>(
+                    decoration: InputDecoration(
+                      fillColor: Colors.white,
+                      filled: true,
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        borderSide:
+                            BorderSide(color: Color(COLOR_PRIMARY), width: 1.0),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    validator: (value) =>
+                        value == null ? 'field required'.tr() : null,
+                    value: selectedCarModel,
+                    onChanged: (value) {
+                      setState(() {
+                        selectedCarModel = value;
+                      });
+                    },
+                    hint: Text('Select Car Model'.tr()),
+                    items: carModelList.map((CarModel item) {
+                      return DropdownMenuItem<CarModel>(
+                        child: Text(item.name.toString()),
+                        value: item,
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: BoxConstraints(minWidth: double.infinity),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
+                  child: TextFormField(
+                    controller: _carPlateController,
+                    validator: validateEmptyField,
+                    textAlignVertical: TextAlignVertical.center,
+                    cursorColor: Color(COLOR_PRIMARY),
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      fillColor: Colors.white,
+                      filled: true,
+                      hintText: 'Car Plate'.tr(),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                          borderSide: BorderSide(
+                              color: Color(COLOR_PRIMARY), width: 1.0)),
+                      errorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Padding(
+              //   padding: const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
+              //   child: Row(
+              //     crossAxisAlignment: CrossAxisAlignment.start,
+              //     children: [
+              //       Transform.translate(
+              //         offset: Offset(0, -8),
+              //         child: Checkbox(
+              //           value: _consentChecked,
+              //           onChanged: (value) {
+              //             setState(() {
+              //               _consentChecked = value ?? false;
+              //             });
+              //           },
+              //           activeColor: Color(COLOR_PRIMARY),
+              //         ),
+              //       ),
+              //       Expanded(
+              //         child: Padding(
+              //           padding: const EdgeInsets.only(top: 8.0),
+              //           child: Text(
+              //             'Concordo em fornecer meus dados para receber conteúdos e ofertas por e-mail ou outros meios.'
+              //                 .tr(),
+              //             style: TextStyle(
+              //               fontSize: 12,
+              //               color: AppThemeData.black,
+              //             ),
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
+              // Checkbox para termos e condições (apenas quando não é login)
+              if (!widget.login) ...[
+                Padding(
+                  padding:
+                      const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Transform.translate(
+                        offset: Offset(0, -8),
+                        child: Checkbox(
+                          value: _termsAccepted,
+                          onChanged: (value) {
+                            setState(() {
+                              _termsAccepted = value ?? false;
+                            });
+                          },
+                          activeColor: Color(COLOR_PRIMARY),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppThemeData.black,
+                              ),
+                              children: [
+                                TextSpan(text: 'Aceito os '),
+                                TextSpan(
+                                  text: 'Termos e Condições',
+                                  style: TextStyle(
+                                    color: Color(COLOR_PRIMARY),
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              TermsAndCondition(),
+                                        ),
+                                      );
+                                    },
+                                ),
+                                TextSpan(text: ' e '),
+                                TextSpan(
+                                  text: 'Política de Privacidade',
+                                  style: TextStyle(
+                                    color: Color(COLOR_PRIMARY),
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              PrivacyPolicyScreen(),
+                                        ),
+                                      );
+                                    },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              Padding(
+                padding: const EdgeInsets.only(
+                    right: 8.0, left: 8.0, top: 16.0, bottom: 16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: double.infinity),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(COLOR_PRIMARY),
+                      padding: EdgeInsets.only(top: 12, bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        side: BorderSide(
+                          color: Color(COLOR_PRIMARY),
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      'Finish Pre Sign Up'.tr(),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            isDarkMode(context) ? Colors.black : Colors.white,
+                      ),
+                    ),
+                    onPressed: () => _signUp(),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(right: 40.0, left: 40.0, top: 40.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(COLOR_PRIMARY),
-                padding: EdgeInsets.only(top: 12, bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25.0),
-                  side: BorderSide(
-                    color: Color(COLOR_PRIMARY),
-                  ),
-                ),
-              ),
-              child: Text(
-                'Sign Up'.tr(),
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode(context) ? Colors.black : Colors.white,
-                ),
-              ),
-              onPressed: () => _signUp(),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Center(
-            child: Text(
-              'OR',
-              style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
-            ).tr(),
-          ),
-        ),
-        InkWell(
-          onTap: () {
-            Navigator.pop(context);
-          },
-          child: Text(
-            widget.login ? 'Login with E-mail'.tr() : 'Sign up with E-mail'.tr(),
-            style: TextStyle(color: Colors.lightBlue, fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 1),
-          ),
-        )
       ],
     );
   }
@@ -901,16 +1219,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               validator: validateName,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: easyLocal.tr('First Name'),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -932,16 +1256,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: 'Last Name'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1063,16 +1393,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
             padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
             child: DropdownButtonFormField<SectionModel>(
                 decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   fillColor: Colors.white,
                   hintText: 'Select Section'.tr(),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25.0),
+                      borderSide:
+                          BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                   errorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                    borderSide:
+                        BorderSide(color: Theme.of(context).colorScheme.error),
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                    borderSide:
+                        BorderSide(color: Theme.of(context).colorScheme.error),
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                   enabledBorder: OutlineInputBorder(
@@ -1088,7 +1424,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                   });
 
                   if (selectedSection != null) {
-                    await FireStoreUtils.getVehicleType(selectedSection!).then((value) {
+                    await FireStoreUtils.getVehicleType(selectedSection!)
+                        .then((value) {
                       setState(() {
                         vehicleType = value;
                       });
@@ -1110,16 +1447,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
             padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
             child: DropdownButtonFormField<VehicleType>(
                 decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   fillColor: Colors.white,
                   hintText: 'Select vehicle type'.tr(),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25.0),
+                      borderSide:
+                          BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                   errorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                    borderSide:
+                        BorderSide(color: Theme.of(context).colorScheme.error),
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                    borderSide:
+                        BorderSide(color: Theme.of(context).colorScheme.error),
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                   enabledBorder: OutlineInputBorder(
@@ -1127,7 +1470,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                 ),
-                validator: (value) => value == null ? 'field required'.tr() : null,
+                validator: (value) =>
+                    value == null ? 'field required'.tr() : null,
                 value: selectedVehicleType,
                 onChanged: (value) async {
                   setState(() {
@@ -1149,14 +1493,20 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
             padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
             child: DropdownButtonFormField<CarMakes>(
                 decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25.0),
+                      borderSide:
+                          BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                   errorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                    borderSide:
+                        BorderSide(color: Theme.of(context).colorScheme.error),
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                    borderSide:
+                        BorderSide(color: Theme.of(context).colorScheme.error),
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                   enabledBorder: OutlineInputBorder(
@@ -1164,7 +1514,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                 ),
-                validator: (value) => value == null ? 'field required'.tr() : null,
+                validator: (value) =>
+                    value == null ? 'field required'.tr() : null,
                 value: selectedCarMakes,
                 onChanged: (value) async {
                   carModelList.clear();
@@ -1172,7 +1523,9 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                   setState(() {
                     selectedCarMakes = value;
                   });
-                  await FireStoreUtils.getCarModel(context, selectedCarMakes!.name.toString()).then((value) {
+                  await FireStoreUtils.getCarModel(
+                          context, selectedCarMakes!.name.toString())
+                      .then((value) {
                     setState(() {
                       carModelList = value;
                     });
@@ -1193,14 +1546,20 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
             padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
             child: DropdownButtonFormField<CarModel>(
                 decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25.0),
+                      borderSide:
+                          BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                   errorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                    borderSide:
+                        BorderSide(color: Theme.of(context).colorScheme.error),
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                    borderSide:
+                        BorderSide(color: Theme.of(context).colorScheme.error),
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                   enabledBorder: OutlineInputBorder(
@@ -1208,7 +1567,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                     borderRadius: BorderRadius.circular(25.0),
                   ),
                 ),
-                validator: (value) => value == null ? 'field required'.tr() : null,
+                validator: (value) =>
+                    value == null ? 'field required'.tr() : null,
                 value: selectedCarModel,
                 onChanged: (value) {
                   setState(() {
@@ -1235,16 +1595,23 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
+                filled: true,
                 hintText: 'Car Plate'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1266,16 +1633,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: 'Car Color'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1290,9 +1663,13 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           padding: EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), shape: BoxShape.rectangle, border: Border.all(color: Colors.grey.shade200)),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                shape: BoxShape.rectangle,
+                border: Border.all(color: Colors.grey.shade200)),
             child: InternationalPhoneNumberInput(
-              onInputChanged: (PhoneNumber number) => _mobileController.text = number.phoneNumber.toString(),
+              onInputChanged: (PhoneNumber number) =>
+                  _mobileController.text = number.phoneNumber.toString(),
               ignoreBlank: true,
               autoValidateMode: AutovalidateMode.onUserInteraction,
               inputDecoration: InputDecoration(
@@ -1308,7 +1685,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               inputBorder: OutlineInputBorder(
                 borderSide: BorderSide.none,
               ),
-              selectorConfig: SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
+              selectorConfig:
+                  SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
             ),
           ),
         ),
@@ -1324,16 +1702,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               validator: validateEmail,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: 'Email Address'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1481,7 +1865,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           child: Center(
             child: Text(
               'OR',
-              style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
+              style: TextStyle(
+                  color: isDarkMode(context) ? Colors.white : Colors.black),
             ).tr(),
           ),
         ),
@@ -1490,8 +1875,14 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
             Navigator.pop(context);
           },
           child: Text(
-            widget.login ? 'Login with E-mail'.tr() : 'Sign up with E-mail'.tr(),
-            style: TextStyle(color: Colors.lightBlue, fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 1),
+            widget.login
+                ? 'Login with E-mail'.tr()
+                : 'Sign up with E-mail'.tr(),
+            style: TextStyle(
+                color: Colors.lightBlue,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                letterSpacing: 1),
           ),
         )
       ],
@@ -1512,16 +1903,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               validator: validateName,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: easyLocal.tr('First Name'),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1543,16 +1940,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: 'Last Name'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1574,16 +1977,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: 'Car Model'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1605,16 +2014,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: 'Car Plate'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1629,9 +2044,13 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           padding: EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), shape: BoxShape.rectangle, border: Border.all(color: Colors.grey.shade200)),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                shape: BoxShape.rectangle,
+                border: Border.all(color: Colors.grey.shade200)),
             child: InternationalPhoneNumberInput(
-              onInputChanged: (PhoneNumber number) => _mobileController.text = number.phoneNumber.toString(),
+              onInputChanged: (PhoneNumber number) =>
+                  _mobileController.text = number.phoneNumber.toString(),
               ignoreBlank: true,
               autoValidateMode: AutovalidateMode.onUserInteraction,
               inputDecoration: InputDecoration(
@@ -1647,7 +2066,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               inputBorder: OutlineInputBorder(
                 borderSide: BorderSide.none,
               ),
-              selectorConfig: SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
+              selectorConfig:
+                  SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
             ),
           ),
         ),
@@ -1663,16 +2083,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               validator: validateEmail,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: 'Email Address'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1696,7 +2122,10 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
                       "Pickup Car proof".tr(),
-                      style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                   Padding(
@@ -1725,10 +2154,13 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                             backgroundColor: Color(COLOR_ACCENT),
                             child: Icon(
                               CupertinoIcons.camera,
-                              color: isDarkMode(context) ? Colors.black : Colors.white,
+                              color: isDarkMode(context)
+                                  ? Colors.black
+                                  : Colors.white,
                             ),
                             mini: true,
-                            onPressed: () => _onPickupCarProofAndDriverProof(false),
+                            onPressed: () =>
+                                _onPickupCarProofAndDriverProof(false),
                           ),
                         )
                       ],
@@ -1743,7 +2175,10 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
                       "Pickup Driver proof".tr(),
-                      style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                   Padding(
@@ -1772,10 +2207,13 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                             backgroundColor: Color(COLOR_ACCENT),
                             child: Icon(
                               CupertinoIcons.camera,
-                              color: isDarkMode(context) ? Colors.black : Colors.white,
+                              color: isDarkMode(context)
+                                  ? Colors.black
+                                  : Colors.white,
                             ),
                             mini: true,
-                            onPressed: () => _onPickupCarProofAndDriverProof(true),
+                            onPressed: () =>
+                                _onPickupCarProofAndDriverProof(true),
                           ),
                         )
                       ],
@@ -1818,7 +2256,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           child: Center(
             child: Text(
               'OR',
-              style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
+              style: TextStyle(
+                  color: isDarkMode(context) ? Colors.white : Colors.black),
             ).tr(),
           ),
         ),
@@ -1827,8 +2266,14 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
             Navigator.pop(context);
           },
           child: Text(
-            widget.login ? 'Login with E-mail'.tr() : 'Sign up with E-mail'.tr(),
-            style: TextStyle(color: Colors.lightBlue, fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 1),
+            widget.login
+                ? 'Login with E-mail'.tr()
+                : 'Sign up with E-mail'.tr(),
+            style: TextStyle(
+                color: Colors.lightBlue,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                letterSpacing: 1),
           ),
         )
       ],
@@ -1849,16 +2294,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               validator: validateName,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: easyLocal.tr('First Name'),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1880,16 +2331,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: 'Last Name'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -2113,9 +2570,13 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           padding: EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), shape: BoxShape.rectangle, border: Border.all(color: Colors.grey.shade200)),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                shape: BoxShape.rectangle,
+                border: Border.all(color: Colors.grey.shade200)),
             child: InternationalPhoneNumberInput(
-              onInputChanged: (PhoneNumber number) => _mobileController.text = number.phoneNumber.toString(),
+              onInputChanged: (PhoneNumber number) =>
+                  _mobileController.text = number.phoneNumber.toString(),
               ignoreBlank: true,
               autoValidateMode: AutovalidateMode.onUserInteraction,
               inputDecoration: InputDecoration(
@@ -2131,7 +2592,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               inputBorder: OutlineInputBorder(
                 borderSide: BorderSide.none,
               ),
-              selectorConfig: SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
+              selectorConfig:
+                  SelectorConfig(selectorType: PhoneInputSelectorType.DIALOG),
             ),
           ),
         ),
@@ -2147,16 +2609,22 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               cursorColor: Color(COLOR_PRIMARY),
               validator: validateEmail,
               decoration: InputDecoration(
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 fillColor: Colors.white,
                 hintText: 'Email Address'.tr(),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                    borderSide:
+                        BorderSide(color: Color(COLOR_PRIMARY), width: 2.0)),
                 errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+                  borderSide:
+                      BorderSide(color: Theme.of(context).colorScheme.error),
                   borderRadius: BorderRadius.circular(25.0),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -2304,7 +2772,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           child: Center(
             child: Text(
               'OR',
-              style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
+              style: TextStyle(
+                  color: isDarkMode(context) ? Colors.white : Colors.black),
             ).tr(),
           ),
         ),
@@ -2313,8 +2782,14 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
             Navigator.pop(context);
           },
           child: Text(
-            widget.login ? 'Login with E-mail'.tr() : 'Sign up with E-mail'.tr(),
-            style: TextStyle(color: Colors.lightBlue, fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 1),
+            widget.login
+                ? 'Login with E-mail'.tr()
+                : 'Sign up with E-mail'.tr(),
+            style: TextStyle(
+                color: Colors.lightBlue,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                letterSpacing: 1),
           ),
         )
       ],
@@ -2327,42 +2802,20 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
     if (widget.login) {
       await _submitPhoneNumber();
     } else {
-      if (_selectedServiceType == "Delivery service") {
-        if (_deliveryKey.currentState?.validate() ?? false) {
-          _deliveryKey.currentState!.save();
-          await _submitPhoneNumber();
-        } else {
-          setState(() {
-            _validate = AutovalidateMode.onUserInteraction;
-          });
-        }
-      } else if (_selectedServiceType == "Parcel service") {
-        if (_parcelServiceKey.currentState?.validate() ?? false) {
-          _parcelServiceKey.currentState!.save();
-          await _submitPhoneNumber();
-        } else {
-          setState(() {
-            _validate = AutovalidateMode.onUserInteraction;
-          });
-        }
-      } else if (_selectedServiceType == "Rental Service") {
-        if (_rentalServiceKey.currentState?.validate() ?? false) {
-          _rentalServiceKey.currentState!.save();
-          await _submitPhoneNumber();
-        } else {
-          setState(() {
-            _validate = AutovalidateMode.onUserInteraction;
-          });
-        }
+      // Validar checkbox de termos e condições
+      if (!_termsAccepted) {
+        ShowToastDialog.showToast(
+            "Deve aceitar os termos e condições para continuar.".tr());
+        return;
+      }
+
+      if (_deliveryKey.currentState?.validate() ?? false) {
+        _deliveryKey.currentState!.save();
+        await _submitPhoneNumber();
       } else {
-        if (_cabServiceKey.currentState?.validate() ?? false) {
-          _cabServiceKey.currentState!.save();
-          await _submitPhoneNumber();
-        } else {
-          setState(() {
-            _validate = AutovalidateMode.onUserInteraction;
-          });
-        }
+        setState(() {
+          _validate = AutovalidateMode.onUserInteraction;
+        });
       }
     }
   }
@@ -2373,18 +2826,27 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
     String driverProofUrl = '';
     String carProofUrl = '';
     if (_image != null) {
-      profilePicUrl = await FireStoreUtils.uploadUserImageToFireStorage(_image!, uid);
+      profilePicUrl =
+          await FireStoreUtils.uploadUserImageToFireStorage(_image!, uid);
     }
     if (_carImage != null) {
-      carPicUrl = await FireStoreUtils.uploadCarImageToFireStorage(_carImage!, uid);
+      carPicUrl =
+          await FireStoreUtils.uploadCarImageToFireStorage(_carImage!, uid);
     }
 
     if (_driverProofPictureURLFile != null) {
-      driverProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(_driverProofPictureURLFile!, Timestamp.now().toString() ?? "");
+      driverProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(
+          _driverProofPictureURLFile!, Timestamp.now().toString() ?? "");
     }
     if (_carProofPictureFile != null) {
-      carProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(_carProofPictureFile!, Timestamp.now().toString());
+      carProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(
+          _carProofPictureFile!, Timestamp.now().toString());
     }
+
+    String fullName = _fullNameController.text.trim();
+    List<String> nameParts = fullName.split(' ');
+    String firstName = nameParts.first;
+    String lastName = nameParts.sublist(1).join(' ');
 
     User user = User(
       email: _emailController.text,
@@ -2393,18 +2855,21 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
       isActive: false,
       active: false,
       phoneNumber: _mobileController.text,
-      firstName: _firstNameController.text,
+      firstName: firstName,
       userID: uid,
-      lastName: _lastNameController.text,
+      lastName: lastName,
       fcmToken: await FireStoreUtils.firebaseMessaging.getToken() ?? '',
       profilePictureURL: profilePicUrl,
       carPictureURL: carPicUrl,
-      carNumber: _carNameController.text,
+      carNumber: _carPlateController.text,
       carName: _carNameController.text,
+      carMakes: _carMakeController.text,
+      vehicleType: _vehicleController.text,
       role: USER_ROLE_DRIVER,
       carProofPictureURL: carProofUrl,
       driverProofPictureURL: driverProofUrl,
       serviceType: "delivery-service",
+      consentCheck: _consentChecked,
       createdAt: Timestamp.now(),
     );
     String? errorMessage = await FireStoreUtils.firebaseCreateNewUser(user);
@@ -2416,8 +2881,8 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
       MyAppState.currentUser!.lastOnlineTimestamp = Timestamp.now();
       await FireStoreUtils.updateCurrentUser(MyAppState.currentUser!);
       await auth.FirebaseAuth.instance.signOut();
-      MyAppState.currentUser = null;
-      pushAndRemoveUntil(context, AuthScreen(), false);
+      // MyAppState.currentUser = null;
+      pushAndRemoveUntil(context, PreSignUpScreen(), false);
     } else {
       return "Couldn't sign up for firebase, Please try again.".tr();
     }
@@ -2430,17 +2895,21 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
     String carProofUrl = '';
     print("ABABAB");
     if (_image != null) {
-      profilePicUrl = await FireStoreUtils.uploadUserImageToFireStorage(_image!, uid);
+      profilePicUrl =
+          await FireStoreUtils.uploadUserImageToFireStorage(_image!, uid);
     }
     if (_carImage != null) {
-      carPicUrl = await FireStoreUtils.uploadCarImageToFireStorage(_carImage!, uid);
+      carPicUrl =
+          await FireStoreUtils.uploadCarImageToFireStorage(_carImage!, uid);
     }
 
     if (_driverProofPictureURLFile != null) {
-      driverProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(_driverProofPictureURLFile!, Timestamp.now().toString());
+      driverProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(
+          _driverProofPictureURLFile!, Timestamp.now().toString());
     }
     if (_carProofPictureFile != null) {
-      carProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(_carProofPictureFile!, Timestamp.now().toString());
+      carProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(
+          _carProofPictureFile!, Timestamp.now().toString());
     }
 
     User user = User(
@@ -2488,17 +2957,21 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
     String driverProofUrl = '';
     String carProofUrl = '';
     if (_image != null) {
-      profilePicUrl = await FireStoreUtils.uploadUserImageToFireStorage(_image!, uid);
+      profilePicUrl =
+          await FireStoreUtils.uploadUserImageToFireStorage(_image!, uid);
     }
     if (_carImage != null) {
-      carPicUrl = await FireStoreUtils.uploadCarImageToFireStorage(_carImage!, uid);
+      carPicUrl =
+          await FireStoreUtils.uploadCarImageToFireStorage(_carImage!, uid);
     }
 
     if (_driverProofPictureURLFile != null) {
-      driverProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(_driverProofPictureURLFile!, Timestamp.now().toString());
+      driverProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(
+          _driverProofPictureURLFile!, Timestamp.now().toString());
     }
     if (_carProofPictureFile != null) {
-      carProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(_carProofPictureFile!, Timestamp.now().toString());
+      carProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(
+          _carProofPictureFile!, Timestamp.now().toString());
     }
 
     User user = User(
@@ -2544,17 +3017,21 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
     String driverProofUrl = '';
     String carProofUrl = '';
     if (_image != null) {
-      profilePicUrl = await FireStoreUtils.uploadUserImageToFireStorage(_image!, uid);
+      profilePicUrl =
+          await FireStoreUtils.uploadUserImageToFireStorage(_image!, uid);
     }
     if (_carImage != null) {
-      carPicUrl = await FireStoreUtils.uploadCarImageToFireStorage(_carImage!, uid);
+      carPicUrl =
+          await FireStoreUtils.uploadCarImageToFireStorage(_carImage!, uid);
     }
 
     if (_driverProofPictureURLFile != null) {
-      driverProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(_driverProofPictureURLFile!, Timestamp.now().toString());
+      driverProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(
+          _driverProofPictureURLFile!, Timestamp.now().toString());
     }
     if (_carProofPictureFile != null) {
-      carProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(_carProofPictureFile!, Timestamp.now().toString());
+      carProofUrl = await FireStoreUtils.uploadCarImageToFireStorage(
+          _carProofPictureFile!, Timestamp.now().toString());
     }
 
     User user = User(
