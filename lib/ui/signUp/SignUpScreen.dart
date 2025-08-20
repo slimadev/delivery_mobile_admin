@@ -5,12 +5,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart' as easyLocal;
 import 'package:emartdriver/constants.dart';
 import 'package:emartdriver/main.dart';
-import 'package:emartdriver/model/CarMakes.dart';
-import 'package:emartdriver/model/CarModel.dart';
 import 'package:emartdriver/model/SectionModel.dart';
 import 'package:emartdriver/model/User.dart';
-import 'package:emartdriver/model/VehicleType.dart';
-import 'package:emartdriver/model/Vehicle_Types.dart';
+import 'package:emartdriver/model/VehicleMake.dart';
+import 'package:emartdriver/model/VehicleTypeModel.dart';
+import 'package:emartdriver/model/VehicleModel.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/ui/auth/AuthScreen.dart';
@@ -24,6 +23,9 @@ import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:emartdriver/theme/app_them_data.dart';
 import 'package:intl/intl.dart';
 import 'package:emartdriver/services/show_toast_dialog.dart';
+import 'package:emartdriver/repositories/vehicle_make_repository.dart';
+import 'package:emartdriver/repositories/vehicle_type_repository.dart';
+import 'package:emartdriver/repositories/section_repository.dart';
 
 File? _image;
 File? _carImage;
@@ -78,23 +80,23 @@ class _SignUpState extends State<SignUpScreen> {
     });
   } // Option 2
 
-  List<VehicleTypes> vehiclesList = [];
-  List<CarMakes> carMakesList = [];
-  List<CarModel> carModelList = [];
+  List<VehicleTypeModel> vehiclesList = [];
+  List<VehicleMake> carMakesList = [];
+  List<VehicleModel> carModelList = [];
 
-  CarMakes? selectedCarMakes;
-  CarModel? selectedCarModel;
-  VehicleTypes? selectedVehicle;
-  List<VehicleType> vehicleType = [];
-  List<VehicleType> rentalVehicleType = [];
-  VehicleType? selectedRentalVehicleType;
-  VehicleType? selectedVehicleType;
+  VehicleMake? selectedCarMakes;
+  VehicleModel? selectedCarModel;
+  VehicleTypeModel? selectedVehicle;
+  List<VehicleTypeModel> vehicleType = [];
+  List<VehicleTypeModel> rentalVehicleType = [];
+  VehicleTypeModel? selectedRentalVehicleType;
+  VehicleTypeModel? selectedVehicleType;
 
   List<SectionModel>? sectionsVal = [];
   SectionModel? selectedSection;
 
   getCarMakes() async {
-    await FireStoreUtils.getCarMakes().then((value) {
+    await VehicleMakeRepository.getVehicleMakes().then((value) {
       setState(() {
         carMakesList = value;
       });
@@ -106,7 +108,7 @@ class _SignUpState extends State<SignUpScreen> {
       });
     });
 
-    await FireStoreUtils.getSections().then((value) {
+    await SectionRepository.getSections().then((value) {
       setState(() {
         sectionsVal = value;
       });
@@ -114,7 +116,7 @@ class _SignUpState extends State<SignUpScreen> {
   }
 
   getVehicles() async {
-    await FireStoreUtils.getVehicles().then((value) {
+    await VehicleTypeRepository.getVehicleTypes().then((value) {
       setState(() {
         vehiclesList = value;
       });
@@ -825,7 +827,7 @@ class _SignUpState extends State<SignUpScreen> {
           constraints: BoxConstraints(minWidth: double.infinity),
           child: Padding(
             padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: DropdownButtonFormField<VehicleTypes>(
+            child: DropdownButtonFormField<VehicleTypeModel>(
               decoration: InputDecoration(
                 contentPadding:
                     EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -852,7 +854,7 @@ class _SignUpState extends State<SignUpScreen> {
               validator: (value) =>
                   value == null ? 'field required'.tr() : null,
               value: selectedVehicle,
-              onChanged: (VehicleTypes? value) async {
+              onChanged: (VehicleTypeModel? value) async {
                 setState(() {
                   selectedVehicle = value;
                   carMakesList.clear();
@@ -875,8 +877,8 @@ class _SignUpState extends State<SignUpScreen> {
                 }
               },
               hint: Text('Select Vehicle Type'.tr()),
-              items: vehiclesList.map((VehicleTypes item) {
-                return DropdownMenuItem<VehicleTypes>(
+              items: vehiclesList.map((VehicleTypeModel item) {
+                return DropdownMenuItem<VehicleTypeModel>(
                   child: Text(item.name.toString()),
                   value: item,
                 );
@@ -890,7 +892,7 @@ class _SignUpState extends State<SignUpScreen> {
           constraints: BoxConstraints(minWidth: double.infinity),
           child: Padding(
             padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: DropdownButtonFormField<CarMakes>(
+            child: DropdownButtonFormField<VehicleMake>(
               decoration: InputDecoration(
                 contentPadding:
                     EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -917,7 +919,7 @@ class _SignUpState extends State<SignUpScreen> {
               validator: (value) =>
                   value == null ? 'field required'.tr() : null,
               value: selectedCarMakes,
-              onChanged: (CarMakes? value) async {
+              onChanged: (VehicleMake? value) async {
                 setState(() {
                   selectedCarMakes = value;
                   carModelList.clear();
@@ -939,8 +941,8 @@ class _SignUpState extends State<SignUpScreen> {
                 }
               },
               hint: Text('Select Vehicle Brand'.tr()),
-              items: carMakesList.map((CarMakes item) {
-                return DropdownMenuItem<CarMakes>(
+              items: carMakesList.map((VehicleMake item) {
+                return DropdownMenuItem<VehicleMake>(
                   child: Text(item.name.toString()),
                   value: item,
                 );
@@ -953,7 +955,7 @@ class _SignUpState extends State<SignUpScreen> {
           constraints: BoxConstraints(minWidth: double.infinity),
           child: Padding(
             padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-            child: DropdownButtonFormField<CarModel>(
+            child: DropdownButtonFormField<VehicleModel>(
               decoration: InputDecoration(
                 contentPadding:
                     EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -986,8 +988,8 @@ class _SignUpState extends State<SignUpScreen> {
                 });
               },
               hint: Text('Select Car Model'.tr()),
-              items: carModelList.map((CarModel item) {
-                return DropdownMenuItem<CarModel>(
+              items: carModelList.map((VehicleModel item) {
+                return DropdownMenuItem<VehicleModel>(
                   child: Text(item.name.toString()),
                   value: item,
                 );
@@ -1446,88 +1448,6 @@ class _SignUpState extends State<SignUpScreen> {
       MyAppState.currentUser = null;
       _showActivationPendingAlert(context);
       // pushAndRemoveUntil(context, AuthScreen(), false);
-    } else if (result != null && result is String) {
-      showAlertDialog(context, 'Failed'.tr(), result, true);
-    } else {
-      showAlertDialog(context, 'Failed'.tr(), "Couldn't sign up".tr(), true);
-    }
-  }
-
-  _signUpWithEmailAndPasswordInRentalService() async {
-    await ShowToastDialog.showLoader('Creating new account, Please wait...');
-    dynamic result =
-        await FireStoreUtils.firebaseSignUpWithEmailAndPasswordRentalService(
-            _emailController.text.trim(),
-            _passwordController.text.trim(),
-            _image,
-            _carImage,
-            _driverProofPictureURLFile,
-            _carProofPictureFile,
-            _carNameController.text,
-            _carPlateController.text,
-            _firstNameController.text,
-            _lastNameController.text,
-            _mobileController.text,
-            "rental-service",
-            companyOrNot == "company"
-                ? ""
-                : selectedRentalVehicleType!.name.toString(),
-            companyOrNot.toString(),
-            _companyNameController.text,
-            _companyAddressController.text);
-    await ShowToastDialog.closeLoader();
-    if (result != null && result is User) {
-      MyAppState.currentUser = result;
-      MyAppState.currentUser!.isActive = false;
-      MyAppState.currentUser!.lastOnlineTimestamp = Timestamp.now();
-      await FireStoreUtils.updateCurrentUser(MyAppState.currentUser!);
-      await auth.FirebaseAuth.instance.signOut();
-      MyAppState.currentUser = null;
-      pushAndRemoveUntil(context, AuthScreen(), false);
-    } else if (result != null && result is String) {
-      showAlertDialog(context, 'Failed'.tr(), result, true);
-    } else {
-      showAlertDialog(context, 'Failed'.tr(), "Couldn't sign up".tr(), true);
-    }
-  }
-
-  _signUpWithEmailAndPasswordInCabService() async {
-    await ShowToastDialog.showLoader('Creating new account, Please wait...');
-    dynamic result =
-        await FireStoreUtils.firebaseSignUpWithEmailAndPasswordCabService(
-            _emailController.text.trim(),
-            _passwordController.text.trim(),
-            _image,
-            _carImage,
-            _driverProofPictureURLFile,
-            _carProofPictureFile,
-            selectedVehicleType != null
-                ? selectedVehicleType!.name.toString()
-                : "",
-            selectedCarMakes != null ? selectedCarMakes!.name.toString() : "",
-            selectedCarModel != null ? selectedCarModel!.name.toString() : "",
-            _carPlateController.text,
-            _carColorController.text,
-            _firstNameController.text,
-            _lastNameController.text,
-            _mobileController.text,
-            "cab-service",
-            companyOrNot.toString(),
-            _companyNameController.text,
-            _companyAddressController.text,
-            selectedSection != null ? selectedSection!.id.toString() : "",
-            selectedVehicleType != null
-                ? selectedVehicleType!.id.toString()
-                : "");
-    await ShowToastDialog.closeLoader();
-    if (result != null && result is User) {
-      MyAppState.currentUser = result;
-      MyAppState.currentUser!.isActive = false;
-      MyAppState.currentUser!.lastOnlineTimestamp = Timestamp.now();
-      await FireStoreUtils.updateCurrentUser(MyAppState.currentUser!);
-      await auth.FirebaseAuth.instance.signOut();
-      MyAppState.currentUser = null;
-      pushAndRemoveUntil(context, AuthScreen(), false);
     } else if (result != null && result is String) {
       showAlertDialog(context, 'Failed'.tr(), result, true);
     } else {

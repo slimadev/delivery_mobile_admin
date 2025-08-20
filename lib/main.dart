@@ -3,13 +3,10 @@ import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:emartdriver/CabService/dashboard_cab_service.dart';
-import 'package:emartdriver/Parcel_service/parcel_service_dashboard.dart';
 import 'package:emartdriver/constants.dart';
 import 'package:emartdriver/firebase_options.dart';
 import 'package:emartdriver/model/CurrencyModel.dart';
 import 'package:emartdriver/model/mail_setting.dart';
-import 'package:emartdriver/rental_service/rental_service_dashboard.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/services/notification_service.dart';
@@ -26,8 +23,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
-
 import 'model/User.dart';
 
 final GlobalKey<NavigatorState> navigatorKey =
@@ -37,12 +32,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-}
-
-void onStart(ServiceInstance service) {
-  Timer.periodic(Duration(minutes: 1), (timer) async {
-    // await updateCurrentLocation();
-  });
 }
 
 void main() async {
@@ -75,7 +64,6 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   SharedPreferences sp = await SharedPreferences.getInstance();
   await UserPreference.init();
-  // await FlutterBackgroundService.initialize(onStart);
   runApp(
     EasyLocalization(
         supportedLocales: const [Locale('en'), Locale('ar'), Locale('pt')],
@@ -302,22 +290,7 @@ class OnBoardingState extends State<OnBoarding> {
                 await FireStoreUtils.firebaseMessaging.getToken() ?? '';
             await FireStoreUtils.updateCurrentUser(user);
             MyAppState.currentUser = user;
-            if (user.serviceType == "cab-service") {
-              pushAndRemoveUntil(
-                  context,
-                  DashBoardCabService(
-                    user: user,
-                  ),
-                  false);
-            } else if (user.serviceType == "parcel_delivery") {
-              pushAndRemoveUntil(
-                  context, ParcelServiceDashBoard(user: user), false);
-            } else if (user.serviceType == "rental-service") {
-              pushAndRemoveUntil(
-                  context, RentalServiceDashBoard(user: user), false);
-            } else {
-              pushAndRemoveUntil(context, ContainerScreen(user: user), false);
-            }
+            pushAndRemoveUntil(context, ContainerScreen(user: user), false);
           } else {
             user.isActive = false;
             user.lastOnlineTimestamp = Timestamp.now();

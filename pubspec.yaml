@@ -82,7 +82,6 @@ dependencies:
   flutter_image_compress: ^2.1.0
 
   slide_to_act: ^2.0.1
-  flutter_background_service: ^5.0.4
 
 dependency_overrides:
   webview_flutter: ^4.9.0

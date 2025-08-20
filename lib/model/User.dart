@@ -1,10 +1,9 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:emartdriver/Parcel_service/parcel_order_model.dart';
 import 'package:emartdriver/constants.dart';
 import 'package:emartdriver/model/AddressModel.dart';
-import 'package:emartdriver/model/CabOrderModel.dart';
+
 import 'package:emartdriver/model/OrderModel.dart';
 import 'package:flutter/foundation.dart';
 
@@ -36,8 +35,7 @@ class User with ChangeNotifier {
   String carPictureURL;
   String? inProgressOrderID;
   OrderModel? orderRequestData;
-  CabOrderModel? ordercabRequestData;
-  ParcelOrderModel? orderParcelRequestData;
+
   UserBankDetails userBankDetails;
   GeoFireData geoFireData;
   GeoPoint coordinates;
@@ -128,8 +126,6 @@ class User with ChangeNotifier {
     coordinates,
     carInfo,
     this.orderRequestData,
-    this.ordercabRequestData,
-    this.orderParcelRequestData,
     this.createdAt,
     this.sectionId,
     this.completedTrips = 0,
@@ -344,15 +340,7 @@ class User with ChangeNotifier {
               parsedJson['orderRequestData'] != null
           ? OrderModel.fromJson(parsedJson['orderRequestData'])
           : null,
-      ordercabRequestData: parsedJson.containsKey('ordercabRequestData') &&
-              parsedJson['ordercabRequestData'] != null
-          ? CabOrderModel.fromJson(parsedJson['ordercabRequestData'])
-          : null,
-      orderParcelRequestData:
-          parsedJson.containsKey('orderParcelRequestData') &&
-                  parsedJson['orderParcelRequestData'] != null
-              ? ParcelOrderModel.fromJson(parsedJson['orderParcelRequestData'])
-              : null,
+
       carProofRejectionReason: parsedJson['carProofRejectionReason'] ?? '',
       profilePictureRejectionReason:
           parsedJson['profilePictureRejectionReason'] ?? '',
@@ -438,10 +426,6 @@ class User with ChangeNotifier {
         'sectionId': this.sectionId,
         if (orderRequestData != null)
           'orderRequestData': orderRequestData!.toJson(),
-        if (ordercabRequestData != null)
-          'ordercabRequestData': ordercabRequestData!.toJson(),
-        if (orderParcelRequestData != null)
-          'orderParcelRequestData': orderParcelRequestData!.toJson(),
       });
     }
     if (this.inProgressOrderID != null) {

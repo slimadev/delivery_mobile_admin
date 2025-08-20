@@ -6,13 +6,13 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:emartdriver/Parcel_service/parcel_order_model.dart';
 import 'package:emartdriver/constants.dart';
 import 'package:emartdriver/main.dart';
 import 'package:emartdriver/model/BlockUserModel.dart';
-import 'package:emartdriver/model/CabOrderModel.dart';
-import 'package:emartdriver/model/CarMakes.dart';
-import 'package:emartdriver/model/CarModel.dart';
+
+import 'package:emartdriver/model/VehicleMake.dart';
+import 'package:emartdriver/model/VehicleTypeModel.dart';
+import 'package:emartdriver/model/VehicleModel.dart';
 import 'package:emartdriver/model/ChatVideoContainer.dart';
 import 'package:emartdriver/model/CurrencyModel.dart';
 import 'package:emartdriver/model/DeliveryChargeModel.dart';
@@ -24,8 +24,7 @@ import 'package:emartdriver/model/PayStackSettingsModel.dart';
 import 'package:emartdriver/model/Ratingmodel.dart';
 import 'package:emartdriver/model/SectionModel.dart';
 import 'package:emartdriver/model/User.dart';
-import 'package:emartdriver/model/VehicleType.dart';
-import 'package:emartdriver/model/Vehicle_Types.dart';
+import 'package:emartdriver/model/VehicleTypeModel.dart';
 import 'package:emartdriver/model/VendorModel.dart';
 import 'package:emartdriver/model/conversation_model.dart';
 import 'package:emartdriver/model/email_template_model.dart';
@@ -42,7 +41,6 @@ import 'package:emartdriver/model/referral_model.dart';
 import 'package:emartdriver/model/stripeSettingData.dart';
 import 'package:emartdriver/model/withdrawHistoryModel.dart';
 import 'package:emartdriver/model/withdraw_method_model.dart';
-import 'package:emartdriver/rental_service/model/rental_order_model.dart';
 import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/ui/reauthScreen/reauth_user_screen.dart';
 import 'package:emartdriver/userPrefrence.dart';
@@ -142,42 +140,6 @@ class FireStoreUtils {
     return null;
   }
 
-  Future<List<RentalOrderModel>> getRentalBook(
-      String userID, bool isCompany) async {
-    List<RentalOrderModel> orders = [];
-    QuerySnapshot<Map<String, dynamic>> ordersQuery;
-    if (isCompany) {
-      ordersQuery = await firestore
-          .collection(RENTALORDER)
-          .where('companyID', isEqualTo: userID)
-          .where("status", isEqualTo: ORDER_STATUS_PLACED)
-          .orderBy('createdAt', descending: true)
-          .get();
-    } else {
-      ordersQuery = await firestore
-          .collection(RENTALORDER)
-          .where('driverID', isEqualTo: userID)
-          .where("status", whereIn: [
-            ORDER_STATUS_PLACED,
-            ORDER_STATUS_DRIVER_ACCEPTED,
-            ORDER_STATUS_IN_TRANSIT
-          ])
-          .orderBy('createdAt', descending: true)
-          .get();
-    }
-
-    await Future.forEach(ordersQuery.docs,
-        (QueryDocumentSnapshot<Map<String, dynamic>> document) {
-      try {
-        orders.add(RentalOrderModel.fromJson(document.data()));
-      } catch (e, stacksTrace) {
-        print('FireStoreUtils.getDriverOrders Parse error ${document.id} $e '
-            '$stacksTrace');
-      }
-    });
-    return orders;
-  }
-
   static Future<WithdrawMethodModel?> getWithdrawMethod() async {
     WithdrawMethodModel? withdrawMethodModel;
     await firestore
@@ -207,97 +169,6 @@ class FireStoreUtils {
     return withdrawMethodModel;
   }
 
-  Future<List<RentalOrderModel>> getRentalBookStatus(
-      String userID, bool isCompany, String status) async {
-    List<RentalOrderModel> orders = [];
-    QuerySnapshot<Map<String, dynamic>> ordersQuery;
-    if (status.isEmpty) {
-      if (isCompany) {
-        ordersQuery = await firestore
-            .collection(RENTALORDER)
-            .where('companyID', isEqualTo: userID)
-            .orderBy('createdAt', descending: true)
-            .get();
-      } else {
-        ordersQuery = await firestore
-            .collection(RENTALORDER)
-            .where('driverID', isEqualTo: userID)
-            .orderBy('createdAt', descending: true)
-            .get();
-      }
-    } else {
-      if (isCompany) {
-        ordersQuery = await firestore
-            .collection(RENTALORDER)
-            .where('companyID', isEqualTo: userID)
-            .where("status", isEqualTo: status)
-            .orderBy('createdAt', descending: true)
-            .get();
-      } else {
-        ordersQuery = await firestore
-            .collection(RENTALORDER)
-            .where('driverID', isEqualTo: userID)
-            .where("status", isEqualTo: status)
-            .orderBy('createdAt', descending: true)
-            .get();
-      }
-    }
-
-    await Future.forEach(ordersQuery.docs,
-        (QueryDocumentSnapshot<Map<String, dynamic>> document) {
-      try {
-        orders.add(RentalOrderModel.fromJson(document.data()));
-      } catch (e, stacksTrace) {
-        print('FireStoreUtils.getDriverOrders Parse error ${document.id} $e '
-            '$stacksTrace');
-      }
-    });
-    return orders;
-  }
-
-  Future<List<RentalOrderModel>> getRentalOrderByDriverOrder(
-      String userID, String companyId) async {
-    List<RentalOrderModel> orders = [];
-    QuerySnapshot<Map<String, dynamic>> ordersQuery;
-    ordersQuery = await firestore
-        .collection(RENTALORDER)
-        .where('driverID', isEqualTo: userID)
-        .get();
-
-    await Future.forEach(ordersQuery.docs,
-        (QueryDocumentSnapshot<Map<String, dynamic>> document) {
-      try {
-        orders.add(RentalOrderModel.fromJson(document.data()));
-      } catch (e, stacksTrace) {
-        print('FireStoreUtils.getDriverOrders Parse error ${document.id} $e '
-            '$stacksTrace');
-      }
-    });
-    return orders;
-  }
-
-  Future<List<CabOrderModel>> getCabOrderByDriverOrder(
-      String userID, String companyId) async {
-    List<CabOrderModel> orders = [];
-    QuerySnapshot<Map<String, dynamic>> ordersQuery;
-    ordersQuery = await firestore
-        .collection(RIDESORDER)
-        .where('driverID', isEqualTo: userID)
-        .orderBy('createdAt', descending: true)
-        .get();
-
-    await Future.forEach(ordersQuery.docs,
-        (QueryDocumentSnapshot<Map<String, dynamic>> document) {
-      try {
-        orders.add(CabOrderModel.fromJson(document.data()));
-      } catch (e, stacksTrace) {
-        print('FireStoreUtils.getDriverOrders Parse error ${document.id} $e '
-            '$stacksTrace');
-      }
-    });
-    return orders;
-  }
-
   late StreamController<User> driverStreamController;
   late StreamSubscription driverStreamSub;
 
@@ -316,11 +187,11 @@ class FireStoreUtils {
     yield* driverStreamController.stream;
   }
 
-  static Future<List<VehicleType>> getVehicleType(
+  static Future<List<VehicleTypeModel>> getVehicleType(
       SectionModel? sectionModel) async {
     print("----------->");
     print(sectionModel!.id);
-    List<VehicleType> vehicleType = [];
+    List<VehicleTypeModel> vehicleType = [];
     QuerySnapshot<Map<String, dynamic>> currencyQuery = await firestore
         .collection(VEHICLETYPE)
         .where('sectionId', isEqualTo: sectionModel.id)
@@ -329,7 +200,7 @@ class FireStoreUtils {
     await Future.forEach(currencyQuery.docs,
         (QueryDocumentSnapshot<Map<String, dynamic>> document) {
       try {
-        vehicleType.add(VehicleType.fromJson(document.data()));
+        vehicleType.add(VehicleTypeModel.fromJson(document.data()));
       } catch (e) {
         print('FireStoreUtils.getCurrencys Parse error $e');
       }
@@ -342,7 +213,7 @@ class FireStoreUtils {
     QuerySnapshot<Map<String, dynamic>> productsQuery = await firestore
         .collection(SECTION)
         .where("isActive", isEqualTo: true)
-        .where('serviceTypeFlag', isEqualTo: "cab-service")
+        // .where('serviceTypeFlag', isEqualTo: "cab-service")
         .get();
     await Future.forEach(productsQuery.docs,
         (QueryDocumentSnapshot<Map<String, dynamic>> document) {
@@ -358,8 +229,8 @@ class FireStoreUtils {
     return sections;
   }
 
-  static Future<List<VehicleType>> getRentalVehicleType() async {
-    List<VehicleType> vehicleType = [];
+  static Future<List<VehicleTypeModel>> getRentalVehicleType() async {
+    List<VehicleTypeModel> vehicleType = [];
     QuerySnapshot<Map<String, dynamic>> currencyQuery = await firestore
         .collection(RENTALVEHICLETYPE)
         .where("isActive", isEqualTo: true)
@@ -368,7 +239,7 @@ class FireStoreUtils {
         (QueryDocumentSnapshot<Map<String, dynamic>> document) {
       try {
         print(document.data());
-        vehicleType.add(VehicleType.fromJson(document.data()));
+        vehicleType.add(VehicleTypeModel.fromJson(document.data()));
       } catch (e) {
         print('FireStoreUtils.getCurrencys Parse error $e');
       }
@@ -376,8 +247,8 @@ class FireStoreUtils {
     return vehicleType;
   }
 
-  static Future<List<CarMakes>> getCarMakes([String? vehicleType]) async {
-    List<CarMakes> carMakesList = [];
+  static Future<List<VehicleMake>> getCarMakes([String? vehicleType]) async {
+    List<VehicleMake> carMakesList = [];
     try {
       Query<Map<String, dynamic>> query =
           firestore.collection(CARMAKES).where("isActive", isEqualTo: true);
@@ -392,7 +263,7 @@ class FireStoreUtils {
       await Future.forEach(currencyQuery.docs,
           (QueryDocumentSnapshot<Map<String, dynamic>> document) {
         try {
-          carMakesList.add(CarMakes.fromJson(document.data()));
+          carMakesList.add(VehicleMake.fromJson(document.data()));
         } catch (e) {
           print('FireStoreUtils.getCarMakes Parse error: $e');
         }
@@ -404,8 +275,8 @@ class FireStoreUtils {
     return carMakesList;
   }
 
-  static Future<List<VehicleTypes>> getVehicles() async {
-    List<VehicleTypes> vehiclesList = [];
+  static Future<List<VehicleTypeModel>> getVehicles() async {
+    List<VehicleTypeModel> vehiclesList = [];
     QuerySnapshot<Map<String, dynamic>> currencyQuery = await firestore
         .collection(VEHICLES)
         .where("isActive", isEqualTo: true)
@@ -413,7 +284,7 @@ class FireStoreUtils {
     await Future.forEach(currencyQuery.docs,
         (QueryDocumentSnapshot<Map<String, dynamic>> document) {
       try {
-        vehiclesList.add(VehicleTypes.fromJson(document.data()));
+        vehiclesList.add(VehicleTypeModel.fromJson(document.data()));
       } catch (e) {
         print('FireStoreUtils.getCurrencys Parse error $e');
       }
@@ -422,11 +293,11 @@ class FireStoreUtils {
     return vehiclesList;
   }
 
-  static Future<List<CarModel>> getCarModel(
+  static Future<List<VehicleModel>> getCarModel(
       BuildContext context, String name) async {
     showProgress(context, 'Please wait...'.tr(), false);
 
-    List<CarModel> carMakesList = [];
+    List<VehicleModel> carMakesList = [];
     QuerySnapshot<Map<String, dynamic>> currencyQuery = await firestore
         .collection(CARMODEL)
         .where("car_make_name", isEqualTo: name)
@@ -436,7 +307,7 @@ class FireStoreUtils {
         (QueryDocumentSnapshot<Map<String, dynamic>> document) {
       try {
         print(document.data());
-        carMakesList.add(CarModel.fromJson(document.data()));
+        carMakesList.add(VehicleModel.fromJson(document.data()));
       } catch (e) {
         print('FireStoreUtils.getCurrencys Parse error $e');
       }
@@ -452,16 +323,6 @@ class FireStoreUtils {
       // print('milaa');
 
       return User.fromJson(userDocument.data()!);
-    } else {
-      return null;
-    }
-  }
-
-  static Future<CabOrderModel?> getCabOrderByOrderId(String orderID) async {
-    DocumentSnapshot<Map<String, dynamic>> userDocument =
-        await firestore.collection(RIDESORDER).doc(orderID).get();
-    if (userDocument.data() != null && userDocument.exists) {
-      return CabOrderModel.fromJson(userDocument.data()!);
     } else {
       return null;
     }
@@ -579,94 +440,6 @@ class FireStoreUtils {
         .set(data)
         .then((value) {});
     return "updated transaction".tr();
-  }
-
-  static Future cabOrderTransaction(
-      {required CabOrderModel orderModel, required num driveramount}) async {
-    DocumentReference documentReference =
-        firestore.collection(OrderTransaction).doc();
-    Map<String, dynamic> data = {
-      "order_id": orderModel.id,
-      "id": documentReference.id,
-      "date": DateTime.now(),
-    };
-    print("Error is false called transaction");
-    data.addAll({
-      "vendorId": "",
-      "vendorAmount": "",
-      "driverId": orderModel.driverID,
-      "driverAmount": driveramount
-    });
-
-    await firestore
-        .collection(OrderTransaction)
-        .doc(documentReference.id)
-        .set(data)
-        .then((value) {});
-    return "updated transaction".tr();
-  }
-
-  static Future parcelOrderTransaction(
-      {required ParcelOrderModel orderModel, required num driveramount}) async {
-    DocumentReference documentReference =
-        firestore.collection(OrderTransaction).doc();
-
-    Map<String, dynamic> data = {
-      "order_id": orderModel.id,
-      "id": documentReference.id,
-      "date": DateTime.now(),
-    };
-    print("Error is false called transaction");
-    data.addAll({
-      "vendorId": "",
-      "vendorAmount": "",
-      "driverId": orderModel.driverID,
-      "driverAmount": driveramount
-    });
-
-    await firestore
-        .collection(OrderTransaction)
-        .doc(documentReference.id)
-        .set(data)
-        .then((value) {});
-    return "updated transaction".tr();
-  }
-
-  static Future rentalOrderTransaction(
-      {required RentalOrderModel orderModel, required num driveramount}) async {
-    DocumentReference documentReference =
-        firestore.collection(OrderTransaction).doc();
-    Map<String, dynamic> data = {
-      "order_id": orderModel.id,
-      "id": documentReference.id,
-      "date": DateTime.now(),
-    };
-    print("Error is false called transaction");
-
-    // if (MyAppState.currentUser!.isCompany == false) {
-    //   data.addAll({"vendorId": "", "vendorAmount": "", "driverId": MyAppState.currentUser!.companyId, "driverAmount": driveramount});
-    // } else {
-    data.addAll({
-      "vendorId": "",
-      "vendorAmount": "",
-      "driverId": orderModel.driverID,
-      "driverAmount": driveramount
-    });
-    // }
-    await firestore
-        .collection(OrderTransaction)
-        .doc(documentReference.id)
-        .set(data)
-        .then((value) {});
-    return "updated transaction".tr();
-  }
-
-  static Future createPaymentId({collectionName = "wallet"}) async {
-    DocumentReference documentReference =
-        firestore.collection(collectionName).doc();
-    final paymentId = documentReference.id;
-    //UserPreference.setPaymentId(paymentId: paymentId);
-    return paymentId;
   }
 
   static Future topUpWalletAmount(
@@ -1155,334 +928,6 @@ class FireStoreUtils {
     return driverList;
   }
 
-  Future<List<User>> getCabCompanyDriver(String companyId) async {
-    List<User> driverList = [];
-
-    QuerySnapshot<Map<String, dynamic>> ordersQuery = await firestore
-        .collection(USERS)
-        .where('companyId', isEqualTo: companyId)
-        .where("serviceType", isEqualTo: "cab-service")
-        .get();
-    await Future.forEach(ordersQuery.docs,
-        (QueryDocumentSnapshot<Map<String, dynamic>> document) {
-      try {
-        driverList.add(User.fromJson(document.data()));
-      } catch (e, stacksTrace) {
-        print('FireStoreUtils.getDriverOrders Parse error ${document.id} $e '
-            '$stacksTrace');
-      }
-    });
-    return driverList;
-  }
-
-  Future<List<CabOrderModel>> getCabDriverOrders(String userID) async {
-    List<CabOrderModel> orders = [];
-
-    QuerySnapshot<Map<String, dynamic>> ordersQuery = await firestore
-        .collection(RIDESORDER)
-        .where('driverID', isEqualTo: userID)
-        .orderBy('createdAt', descending: true)
-        .get();
-    await Future.forEach(ordersQuery.docs,
-        (QueryDocumentSnapshot<Map<String, dynamic>> document) {
-      try {
-        orders.add(CabOrderModel.fromJson(document.data()));
-      } catch (e, stacksTrace) {
-        print('FireStoreUtils.getDriverOrders Parse error ${document.id} $e '
-            '$stacksTrace');
-      }
-    });
-    return orders;
-  }
-
-  Future<List<ParcelOrderModel>> getParcelDriverOrders(String userID) async {
-    List<ParcelOrderModel> orders = [];
-
-    QuerySnapshot<Map<String, dynamic>> ordersQuery = await firestore
-        .collection(PARCELORDER)
-        .where('driverID', isEqualTo: userID)
-        .orderBy('createdAt', descending: true)
-        .get();
-    await Future.forEach(ordersQuery.docs,
-        (QueryDocumentSnapshot<Map<String, dynamic>> document) {
-      try {
-        print(document.data());
-        orders.add(ParcelOrderModel.fromJson(document.data()));
-      } catch (e, stacksTrace) {
-        print('FireStoreUtils.getDriverOrders Parse error ${document.id} $e '
-            '$stacksTrace');
-      }
-    });
-    return orders;
-  }
-
-  static Future updateOrder(OrderModel orderModel) async {
-    await firestore
-        .collection(ORDERS)
-        .doc(orderModel.id)
-        .set(orderModel.toJson(), SetOptions(merge: true));
-  }
-
-  static Future<SectionModel?> getSectionBySectionId(String uid) async {
-    DocumentSnapshot<Map<String, dynamic>> userDocument =
-        await firestore.collection(SECTION).doc(uid).get();
-    if (userDocument.data() != null && userDocument.exists) {
-      // print('milaa');
-
-      return SectionModel.fromJson(userDocument.data()!);
-    } else {
-      return null;
-    }
-  }
-
-  static Future<bool> getRentalFirstOrderOrNOt(
-      RentalOrderModel orderModel) async {
-    bool isFirst = true;
-    await firestore
-        .collection(RENTALORDER)
-        .where('authorID', isEqualTo: orderModel.authorID)
-        .get()
-        .then((value) {
-      if (value.size == 1) {
-        isFirst = true;
-      } else {
-        isFirst = false;
-      }
-    });
-    return isFirst;
-  }
-
-  static Future updateRentalReferralAmount(RentalOrderModel orderModel) async {
-    ReferralModel? referralModel;
-    SectionModel? sectionModel;
-    print(orderModel.authorID);
-    await getSectionBySectionId(orderModel.sectionId.toString()).then((value) {
-      sectionModel = value;
-    });
-    await firestore
-        .collection(REFERRAL)
-        .doc(orderModel.authorID)
-        .get()
-        .then((value) {
-      if (value.data() != null) {
-        referralModel = ReferralModel.fromJson(value.data()!);
-      } else {
-        return;
-      }
-    });
-
-    if (referralModel != null) {
-      if (referralModel!.referralBy != null &&
-          referralModel!.referralBy!.isNotEmpty) {
-        await firestore
-            .collection(USERS)
-            .doc(referralModel!.referralBy)
-            .get()
-            .then((value) async {
-          DocumentSnapshot<Map<String, dynamic>> userDocument = value;
-          if (userDocument.data() != null && userDocument.exists) {
-            try {
-              print(userDocument.data());
-              User user = User.fromJson(userDocument.data()!);
-              await firestore.collection(USERS).doc(user.userID).update({
-                "wallet_amount": user.walletAmount +
-                    double.parse(sectionModel!.referralAmount.toString())
-              }).then((value) => print("north"));
-
-              await FireStoreUtils.createPaymentId().then((value) async {
-                final paymentID = value;
-                await FireStoreUtils.topUpWalletAmountRefral(
-                    paymentMethod: "Referral Amount",
-                    amount:
-                        double.parse(sectionModel!.referralAmount.toString()),
-                    id: paymentID,
-                    userId: referralModel!.referralBy);
-              });
-            } catch (error) {
-              print(error);
-              if (error.toString() ==
-                  "Bad state: field does not exist within the DocumentSnapshotPlatform") {
-                print("does not exist");
-                //await firestore.collection(USERS).doc(userId).update({"wallet_amount": 0});
-                //walletAmount = 0;
-              } else {
-                print("went wrong!!");
-              }
-            }
-            print("data val");
-          }
-        });
-      } else {
-        return;
-      }
-    }
-  }
-
-  static Future<bool> getParcelFirstOrderOrNOt(
-      ParcelOrderModel orderModel) async {
-    bool isFirst = true;
-    await firestore
-        .collection(PARCELORDER)
-        .where('authorID', isEqualTo: orderModel.authorID)
-        .get()
-        .then((value) {
-      if (value.size == 1) {
-        isFirst = true;
-      } else {
-        isFirst = false;
-      }
-    });
-    return isFirst;
-  }
-
-  static Future updateParcelReferralAmount(ParcelOrderModel orderModel) async {
-    ReferralModel? referralModel;
-    SectionModel? sectionModel;
-    print(orderModel.authorID);
-    await getSectionBySectionId(orderModel.sectionId.toString()).then((value) {
-      sectionModel = value;
-    });
-    await firestore
-        .collection(REFERRAL)
-        .doc(orderModel.authorID)
-        .get()
-        .then((value) {
-      if (value.data() != null) {
-        referralModel = ReferralModel.fromJson(value.data()!);
-      } else {
-        return;
-      }
-    });
-
-    if (referralModel != null) {
-      if (referralModel!.referralBy != null &&
-          referralModel!.referralBy!.isNotEmpty) {
-        await firestore
-            .collection(USERS)
-            .doc(referralModel!.referralBy)
-            .get()
-            .then((value) async {
-          DocumentSnapshot<Map<String, dynamic>> userDocument = value;
-          if (userDocument.data() != null && userDocument.exists) {
-            try {
-              print(userDocument.data());
-              User user = User.fromJson(userDocument.data()!);
-              await firestore.collection(USERS).doc(user.userID).update({
-                "wallet_amount": user.walletAmount +
-                    double.parse(sectionModel!.referralAmount.toString())
-              }).then((value) => print("north"));
-
-              await FireStoreUtils.createPaymentId().then((value) async {
-                final paymentID = value;
-                await FireStoreUtils.topUpWalletAmountRefral(
-                    paymentMethod: "Referral Amount",
-                    amount:
-                        double.parse(sectionModel!.referralAmount.toString()),
-                    id: paymentID,
-                    userId: referralModel!.referralBy);
-              });
-            } catch (error) {
-              print(error);
-              if (error.toString() ==
-                  "Bad state: field does not exist within the DocumentSnapshotPlatform") {
-                print("does not exist");
-                //await firestore.collection(USERS).doc(userId).update({"wallet_amount": 0});
-                //walletAmount = 0;
-              } else {
-                print("went wrong!!");
-              }
-            }
-            print("data val");
-          }
-        });
-      } else {
-        return;
-      }
-    }
-  }
-
-  static Future<bool> getCabFirstOrderOrNOt(CabOrderModel orderModel) async {
-    bool isFirst = true;
-    await firestore
-        .collection(RIDESORDER)
-        .where('authorID', isEqualTo: orderModel.authorID)
-        .get()
-        .then((value) {
-      if (value.size == 1) {
-        isFirst = true;
-      } else {
-        isFirst = false;
-      }
-    });
-    return isFirst;
-  }
-
-  static Future updateCabReferralAmount(CabOrderModel orderModel) async {
-    ReferralModel? referralModel;
-    SectionModel? sectionModel;
-    print(orderModel.authorID);
-    await getSectionBySectionId(orderModel.sectionId.toString()).then((value) {
-      sectionModel = value;
-    });
-    await firestore
-        .collection(REFERRAL)
-        .doc(orderModel.authorID)
-        .get()
-        .then((value) {
-      if (value.data() != null) {
-        referralModel = ReferralModel.fromJson(value.data()!);
-      } else {
-        return;
-      }
-    });
-
-    if (referralModel != null) {
-      if (referralModel!.referralBy != null &&
-          referralModel!.referralBy!.isNotEmpty) {
-        await firestore
-            .collection(USERS)
-            .doc(referralModel!.referralBy)
-            .get()
-            .then((value) async {
-          DocumentSnapshot<Map<String, dynamic>> userDocument = value;
-          if (userDocument.data() != null && userDocument.exists) {
-            try {
-              print(userDocument.data());
-              User user = User.fromJson(userDocument.data()!);
-              await firestore.collection(USERS).doc(user.userID).update({
-                "wallet_amount": user.walletAmount +
-                    double.parse(sectionModel!.referralAmount.toString())
-              }).then((value) => print("north"));
-
-              await FireStoreUtils.createPaymentId().then((value) async {
-                final paymentID = value;
-                await FireStoreUtils.topUpWalletAmountRefral(
-                    paymentMethod: "Referral Amount",
-                    amount:
-                        double.parse(sectionModel!.referralAmount.toString()),
-                    id: paymentID,
-                    userId: referralModel!.referralBy);
-              });
-            } catch (error) {
-              print(error);
-              if (error.toString() ==
-                  "Bad state: field does not exist within the DocumentSnapshotPlatform") {
-                print("does not exist");
-                //await firestore.collection(USERS).doc(userId).update({"wallet_amount": 0});
-                //walletAmount = 0;
-              } else {
-                print("went wrong!!");
-              }
-            }
-            print("data val");
-          }
-        });
-      } else {
-        return;
-      }
-    }
-  }
-
   static Future<bool> getFirestOrderOrNOt(OrderModel orderModel) async {
     bool isFirst = true;
     await firestore
@@ -1498,6 +943,12 @@ class FireStoreUtils {
       }
     });
     return isFirst;
+  }
+
+  static Future<SectionModel?> getSectionBySectionId(String sectionId) async {
+    DocumentSnapshot<Map<String, dynamic>> sectionDocument =
+        await firestore.collection(SECTION).doc(sectionId).get();
+    return SectionModel.fromJson(sectionDocument.data()!);
   }
 
   static Future updateReferralAmount(OrderModel orderModel) async {
@@ -1518,9 +969,6 @@ class FireStoreUtils {
         }
       });
 
-      print("refferealAMount----->${valueSection!.referralAmount.toString()}");
-      print("refferealAMount----->${referralModel!.referralBy}");
-
       if (referralModel != null) {
         if (referralModel!.referralBy != null &&
             referralModel!.referralBy!.isNotEmpty) {
@@ -1534,19 +982,19 @@ class FireStoreUtils {
               try {
                 print(userDocument.data());
                 User user = User.fromJson(userDocument.data()!);
-                await firestore.collection(USERS).doc(user.userID).update({
-                  "wallet_amount": user.walletAmount +
-                      double.parse(valueSection.referralAmount.toString())
-                }).then((value) => print("north"));
+                // await firestore.collection(USERS).doc(user.userID).update({
+                //   "wallet_amount": user.walletAmount +
+                //       double.parse(valueSection!.referralAmount.toString())
+                // }).then((value) => print("north"));
 
                 await FireStoreUtils.createPaymentId().then((value) async {
                   final paymentID = value;
-                  await FireStoreUtils.topUpWalletAmountRefral(
-                      paymentMethod: "Referral Amount",
-                      amount:
-                          double.parse(valueSection.referralAmount.toString()),
-                      id: paymentID,
-                      userId: referralModel!.referralBy);
+                  // await FireStoreUtils.topUpWalletAmountRefral(
+                  //     paymentMethod: "Referral Amount",
+                  //     amount:
+                  //         double.parse(valueSection.referralAmount.toString()),
+                  //     id: paymentID,
+                  //     userId: referralModel!.referralBy);
                 });
               } catch (error) {
                 print(error);
@@ -1567,89 +1015,6 @@ class FireStoreUtils {
         }
       }
     });
-  }
-
-  static Future<bool> getFirestOrderOrNOtCabService(
-      CabOrderModel orderModel) async {
-    bool isFirst = true;
-    await firestore
-        .collection(ORDERS)
-        .where('authorID', isEqualTo: orderModel.authorID)
-        .get()
-        .then((value) {
-      if (value.size == 1) {
-        isFirst = true;
-      } else {
-        isFirst = false;
-      }
-    });
-    return isFirst;
-  }
-
-  static Future updateReferralAmountCabService(CabOrderModel orderModel) async {
-    ReferralModel? referralModel;
-    SectionModel? sectionModel;
-    print(orderModel.authorID);
-    await getSectionBySectionId(orderModel.sectionId.toString()).then((value) {
-      sectionModel = value;
-    });
-    await firestore
-        .collection(REFERRAL)
-        .doc(orderModel.authorID)
-        .get()
-        .then((value) {
-      if (value.data() != null) {
-        referralModel = ReferralModel.fromJson(value.data()!);
-      } else {
-        return;
-      }
-    });
-
-    if (referralModel != null) {
-      if (referralModel!.referralBy != null &&
-          referralModel!.referralBy!.isNotEmpty) {
-        await firestore
-            .collection(USERS)
-            .doc(referralModel!.referralBy)
-            .get()
-            .then((value) async {
-          DocumentSnapshot<Map<String, dynamic>> userDocument = value;
-          if (userDocument.data() != null && userDocument.exists) {
-            try {
-              print(userDocument.data());
-              User user = User.fromJson(userDocument.data()!);
-              await firestore.collection(USERS).doc(user.userID).update({
-                "wallet_amount": user.walletAmount +
-                    double.parse(sectionModel!.referralAmount.toString())
-              }).then((value) => print("north"));
-
-              await FireStoreUtils.createPaymentId().then((value) async {
-                final paymentID = value;
-                await FireStoreUtils.topUpWalletAmountRefral(
-                    paymentMethod: "Referral Amount",
-                    amount:
-                        double.parse(sectionModel!.referralAmount.toString()),
-                    id: paymentID,
-                    userId: referralModel!.referralBy);
-              });
-            } catch (error) {
-              print(error);
-              if (error.toString() ==
-                  "Bad state: field does not exist within the DocumentSnapshotPlatform") {
-                print("does not exist");
-                //await firestore.collection(USERS).doc(userId).update({"wallet_amount": 0});
-                //walletAmount = 0;
-              } else {
-                print("went wrong!!");
-              }
-            }
-            print("data val");
-          }
-        });
-      } else {
-        return;
-      }
-    }
   }
 
   static sendTopUpMail(
@@ -1767,14 +1132,6 @@ class FireStoreUtils {
     return "updated Amount".tr();
   }
 
-  static Future updateCabOrder(CabOrderModel orderModel) async {
-    print("------->${orderModel.adminCommission}");
-    await firestore
-        .collection(RIDESORDER)
-        .doc(orderModel.id)
-        .set(orderModel.toJson(), SetOptions(merge: true));
-  }
-
   late StreamController<OrderModel> ordersStreamController;
   late StreamSubscription ordersStreamSub;
 
@@ -1791,58 +1148,6 @@ class FireStoreUtils {
       }
     });
     yield* ordersStreamController.stream;
-  }
-
-  late StreamController<CabOrderModel> cabOrdersStreamController;
-  late StreamSubscription cabOrdersStreamSub;
-
-  Stream<CabOrderModel?> getCabOrderByID(String inProgressOrderID) async* {
-    cabOrdersStreamController = StreamController();
-    cabOrdersStreamSub = firestore
-        .collection(RIDESORDER)
-        .doc(inProgressOrderID)
-        .snapshots()
-        .listen((onData) async {
-      if (onData.data() != null) {
-        CabOrderModel? orderModel = CabOrderModel.fromJson(onData.data()!);
-        cabOrdersStreamController.sink.add(orderModel);
-      }
-    });
-    yield* cabOrdersStreamController.stream;
-  }
-
-  late StreamController<ParcelOrderModel> parcelOrdersStreamController;
-  late StreamSubscription parcelOrdersStreamSub;
-
-  Stream<ParcelOrderModel?> getParcelOrderByID(
-      String inProgressOrderID) async* {
-    parcelOrdersStreamController = StreamController();
-    parcelOrdersStreamSub = firestore
-        .collection(PARCELORDER)
-        .doc(inProgressOrderID)
-        .snapshots()
-        .listen((onData) async {
-      if (onData.data() != null) {
-        ParcelOrderModel? orderModel =
-            ParcelOrderModel.fromJson(onData.data()!);
-        parcelOrdersStreamController.sink.add(orderModel);
-      }
-    });
-    yield* parcelOrdersStreamController.stream;
-  }
-
-  static Future updateParcelOrder(ParcelOrderModel orderModel) async {
-    await firestore
-        .collection(PARCELORDER)
-        .doc(orderModel.id)
-        .set(orderModel.toJson(), SetOptions(merge: true));
-  }
-
-  static Future updateRentalOrder(RentalOrderModel orderModel) async {
-    await firestore
-        .collection(RENTALORDER)
-        .doc(orderModel.id)
-        .set(orderModel.toJson(), SetOptions(merge: true));
   }
 
   /// compress video file to make it load faster but with lower quality,
@@ -2186,69 +1491,6 @@ class FireStoreUtils {
     }
   }
 
-  static Future<dynamic> firebaseSubmitPhoneNumberCodeCabService(
-      String verificationID, String code, String phoneNumber,
-      {String firstName = 'Anonymous',
-      String lastName = 'User',
-      File? image,
-      File? carImage,
-      String carMakes = '',
-      String carName = '',
-      String carPlates = '',
-      String? vehicleType = '',
-      String? serviceType = ''}) async {
-    auth.AuthCredential authCredential = auth.PhoneAuthProvider.credential(
-        verificationId: verificationID, smsCode: code);
-    auth.UserCredential userCredential =
-        await auth.FirebaseAuth.instance.signInWithCredential(authCredential);
-    User? user = await getCurrentUser(userCredential.user?.uid ?? '');
-    if (user != null && user.role == USER_ROLE_DRIVER) {
-      user.fcmToken = await firebaseMessaging.getToken() ?? '';
-      user.role = USER_ROLE_DRIVER;
-      user.isActive = false;
-      await updateCurrentUser(user);
-      return user;
-    } else if (user == null) {
-      /// create a new user from phone login
-      String profileImageUrl = '';
-      String carPicUrl = DEFAULT_CAR_IMAGE;
-      if (image != null) {
-        profileImageUrl = await uploadUserImageToFireStorage(
-            image, userCredential.user?.uid ?? '');
-      }
-      if (carImage != null) {
-        carPicUrl = await uploadCarImageToFireStorage(
-            carImage, userCredential.user?.uid ?? '');
-      }
-      User user = User(
-        firstName: firstName,
-        lastName: lastName,
-        fcmToken: await firebaseMessaging.getToken() ?? '',
-        phoneNumber: phoneNumber,
-        profilePictureURL: profileImageUrl,
-        userID: userCredential.user?.uid ?? '',
-        isActive: false,
-        active: false,
-        lastOnlineTimestamp: Timestamp.now(),
-        settings: UserSettings(),
-        email: '',
-        role: USER_ROLE_DRIVER,
-        carName: carName,
-        carMakes: carMakes,
-        carNumber: carPlates,
-        carPictureURL: carPicUrl,
-        vehicleType: vehicleType.toString(),
-        serviceType: serviceType.toString(),
-      );
-      String? errorMessage = await firebaseCreateNewUser(user);
-      if (errorMessage == null) {
-        return user;
-      } else {
-        return "Couldn't create new user with phone number.".tr();
-      }
-    }
-  }
-
   static Future<String?> _showSmsCodeDialog() async {
     // This should be implemented in your UI, e.g., in sign_up_screen.dart
     // For now, return null to indicate it needs implementation
@@ -2505,115 +1747,6 @@ class FireStoreUtils {
       return null;
     } catch (e) {
       return null;
-    }
-  }
-
-  static firebaseSignUpWithEmailAndPasswordCabService(
-    String emailAddress,
-    String password,
-    File? image,
-    File? carImage,
-    File? driverProofImage,
-    File? carProofImage,
-    String vehicleType,
-    String carMakes,
-    String carModel,
-    String carPlate,
-    String carColor,
-    String firstName,
-    String lastName,
-    String mobile,
-    String serviceType,
-    String companyOrNot,
-    String companyName,
-    String companyAddress,
-    String sectionId,
-    String vehicleId,
-  ) async {
-    try {
-      auth.UserCredential result = await auth.FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-              email: emailAddress, password: password);
-      String profilePicUrl = '';
-      String carPicUrl = DEFAULT_CAR_IMAGE;
-      String driverProofUrl = '';
-      String carProofUrl = '';
-      if (image != null) {
-        profilePicUrl =
-            await uploadUserImageToFireStorage(image, result.user?.uid ?? '');
-      }
-      if (carImage != null) {
-        carPicUrl =
-            await uploadCarImageToFireStorage(carImage, result.user?.uid ?? '');
-      }
-
-      if (driverProofImage != null) {
-        driverProofUrl = await uploadCarImageToFireStorage(
-            driverProofImage, Timestamp.now().toString() ?? '');
-      }
-      if (carProofImage != null) {
-        carProofUrl = await uploadCarImageToFireStorage(
-            carProofImage, Timestamp.now().toString() ?? '');
-      }
-
-      User user = User(
-          email: emailAddress,
-          settings: UserSettings(),
-          lastOnlineTimestamp: Timestamp.now(),
-          isActive: false,
-          active: false,
-          phoneNumber: mobile,
-          firstName: firstName,
-          userID: result.user?.uid ?? '',
-          lastName: lastName,
-          fcmToken: await firebaseMessaging.getToken() ?? '',
-          profilePictureURL: profilePicUrl,
-          carPictureURL: carPicUrl,
-          carNumber: carPlate,
-          carName: carModel,
-          carMakes: carMakes,
-          vehicleType: vehicleType,
-          serviceType: serviceType,
-          role: USER_ROLE_DRIVER,
-          // isCompany: companyOrNot == "company" ? true : false,
-          // companyName: companyName,
-          // companyAddress: companyAddress,
-          carProofPictureURL: carProofUrl,
-          driverProofPictureURL: driverProofUrl,
-          carColor: carColor,
-          sectionId: sectionId,
-          rideType: 'ride',
-          vehicleId: vehicleId,
-          createdAt: Timestamp.now());
-      String? errorMessage = await firebaseCreateNewUser(user);
-      if (errorMessage == null) {
-        return user;
-      } else {
-        return 'Couldn\'t sign up for firebase, Please try again.'.tr();
-      }
-    } on auth.FirebaseAuthException catch (error) {
-      print(error.toString() + '${error.stackTrace}');
-      String message = 'Couldn\'t sign up';
-      switch (error.code) {
-        case 'email-already-in-use':
-          message = 'Email already in use, Please pick another email!';
-          break;
-        case 'invalid-email':
-          message = 'Enter valid e-mail';
-          break;
-        case 'operation-not-allowed':
-          message = 'Email/password accounts are not enabled';
-          break;
-        case 'weak-password':
-          message = 'Password must be more than 5 characters';
-          break;
-        case 'too-many-requests':
-          message = 'Too many requests, Please try again later.';
-          break;
-      }
-      return message;
-    } catch (e) {
-      return 'Couldn\'t sign up';
     }
   }
 
@@ -2918,6 +2051,21 @@ class FireStoreUtils {
     });
 
     //yield* razorPayStreamController.stream;
+  }
+
+  static Future updateOrder(OrderModel orderModel) async {
+    await firestore
+        .collection(ORDERS)
+        .doc(orderModel.id)
+        .set(orderModel.toJson(), SetOptions(merge: true));
+  }
+
+  static Future createPaymentId({collectionName = "wallet"}) async {
+    DocumentReference documentReference =
+        firestore.collection(collectionName).doc();
+    final paymentId = documentReference.id;
+    //UserPreference.setPaymentId(paymentId: paymentId);
+    return paymentId;
   }
 
   static Future<void> updateOrderDriverId(

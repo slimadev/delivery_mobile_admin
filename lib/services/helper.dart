@@ -4,12 +4,9 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:emartdriver/Parcel_service/parcel_order_model.dart';
 import 'package:emartdriver/constants.dart';
-import 'package:emartdriver/model/CabOrderModel.dart';
 import 'package:emartdriver/model/OrderModel.dart';
 import 'package:emartdriver/model/withdrawHistoryModel.dart';
-import 'package:emartdriver/rental_service/model/rental_order_model.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/show_toast_dialog.dart';
 import 'package:emartdriver/theme/app_them_data.dart';
@@ -36,18 +33,18 @@ String? validateMobile(String? value) {
   if (value == null || value.isEmpty) {
     return 'Mobile is required'.tr();
   }
-  // Remove espaços, traços e parênteses
   String cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
-  // Remove o DDI se vier junto
   if (cleaned.startsWith('258')) {
     cleaned = cleaned.substring(3);
   }
   if (cleaned.length != 9) {
     return 'please enter valid number'.tr();
   }
-  if (!RegExp(r'^[0-9]{9}\$').hasMatch(cleaned)) {
+  if (!RegExp(r'^[0-9]{9}$').hasMatch(cleaned)) {
+    print("o nr clean:$cleaned");
     return 'Mobile Number must be digits'.tr();
   }
+  print("passou");
   return null;
 }
 
@@ -338,8 +335,6 @@ Future<Position> getCurrentLocation() async {
   return await Geolocator.getCurrentPosition();
 }
 
-
-
 String audioMessageTime(Duration audioDuration) {
   String twoDigits(int n) {
     if (n >= 10) return '$n';
@@ -514,168 +509,6 @@ updateWallateAmount(OrderModel orderModel) async {
     }
   });
 }*/
-
-updateCabWalletAmount(CabOrderModel orderModel) {
-  double totalTax = 0.0;
-
-  /*if (orderModel.taxType!.isNotEmpty) {
-    if (orderModel.taxType == "percent") {
-      totalTax = (double.parse(orderModel.subTotal.toString()) - double.parse(orderModel.discount.toString())) * double.parse(orderModel.tax.toString()) / 100;
-    } else {
-      totalTax = double.parse(orderModel.tax.toString());
-    }
-  }*/
-
-  double subTotal = double.parse(orderModel.subTotal.toString()) -
-      double.parse(orderModel.discount.toString());
-
-  if (orderModel.taxModel != null) {
-    for (var element in orderModel.taxModel!) {
-      totalTax = totalTax +
-          calculateTax(amount: subTotal.toString(), taxModel: element);
-    }
-  }
-  double adminComm = 0.0;
-  if (orderModel.adminCommission!.isNotEmpty) {
-    adminComm = (orderModel.adminCommissionType!.toLowerCase() ==
-                'Percent'.toLowerCase() ||
-            orderModel.adminCommissionType!.toLowerCase() ==
-                'percentage'.toLowerCase())
-        ? (subTotal * double.parse(orderModel.adminCommission!)) / 100
-        : double.parse(orderModel.adminCommission!);
-  }
-
-  print("--->finalAmount---- $subTotal");
-  double tipValue = orderModel.tipValue!.isEmpty
-      ? 0.0
-      : double.parse(orderModel.tipValue.toString());
-  double driverAmount = 0;
-  if (orderModel.paymentMethod.toLowerCase() != "cod") {
-    driverAmount = (subTotal + totalTax + tipValue) - adminComm;
-  } else {
-    driverAmount = -(subTotal + totalTax + tipValue + adminComm);
-  }
-  if (orderModel.paymentMethod.toLowerCase() != "cod") {
-    driverAmount = (subTotal + totalTax + tipValue) - adminComm;
-  } else {
-    //driverAmount = -(subTotal + totalTax + tipValue + adminComm);
-    driverAmount = -((subTotal + totalTax + tipValue) - adminComm);
-  }
-
-  print("----->$driverAmount");
-
-  print("--->driverAmount---- $driverAmount");
-
-  // if (orderModel.driver!.companyId.isNotEmpty) {
-  //   FireStoreUtils.updateCompanyWalletAmount(companyId: orderModel.driver!.companyId, amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
-  // } else {
-  FireStoreUtils.updateCurrentUserWallet(
-      userId: orderModel.driverID!,
-      amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
-  // }
-
-  // FireStoreUtils.updateWalletAmount(userId: orderModel.driverID!, amount: num.parse(driverAmount.toStringAsFixed(decimal)));
-  // FireStoreUtils.cabOrderTransaction(orderModel: orderModel, driveramount: double.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
-}
-
-updateParcelWalletAmount(ParcelOrderModel orderModel) {
-  double totalTax = 0.0;
-
-/*  if (orderModel.taxType!.isNotEmpty) {
-    if (orderModel.taxType == "percent") {
-      totalTax = (double.parse(orderModel.subTotal.toString()) - double.parse(orderModel.discount.toString())) * double.parse(orderModel.tax.toString()) / 100;
-    } else {
-      totalTax = double.parse(orderModel.tax.toString());
-    }
-  }*/
-
-  double subTotal = double.parse(orderModel.subTotal.toString()) -
-      double.parse(orderModel.discount.toString());
-
-  if (orderModel.taxModel != null) {
-    for (var element in orderModel.taxModel!) {
-      totalTax = totalTax +
-          calculateTax(amount: subTotal.toString(), taxModel: element);
-    }
-  }
-
-  double adminComm = 0.0;
-  if (orderModel.adminCommission!.isNotEmpty) {
-    adminComm = (orderModel.adminCommissionType!.toLowerCase() ==
-                'Percent'.toLowerCase() ||
-            orderModel.adminCommissionType!.toLowerCase() ==
-                'percentage'.toLowerCase())
-        ? (subTotal * double.parse(orderModel.adminCommission!)) / 100
-        : double.parse(orderModel.adminCommission!);
-  }
-
-  print("--->finalAmount---- $subTotal");
-  double driverAmount = 0;
-  if (orderModel.paymentMethod.toLowerCase() != "cod") {
-    driverAmount = (subTotal + totalTax) - adminComm;
-  } else {
-    // driverAmount = -(subTotal + totalTax + adminComm);
-    driverAmount = -((subTotal + totalTax) - adminComm);
-  }
-  print("----->$driverAmount");
-
-  print("--->driverAmount---- $driverAmount");
-
-  FireStoreUtils.updateCurrentUserWallet(
-      userId: orderModel.driverID!,
-      amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
-//  FireStoreUtils.parcelOrderTransaction(orderModel: orderModel, driveramount: double.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
-}
-
-updateRentalWalletAmount(RentalOrderModel orderModel) {
-  double totalTax = 0.0;
-
-  double subTotal = (double.parse(orderModel.subTotal.toString()) +
-          double.parse(orderModel.driverRate.toString())) -
-      double.parse(orderModel.discount.toString());
-
-  if (orderModel.taxModel != null) {
-    for (var element in orderModel.taxModel!) {
-      totalTax = totalTax +
-          calculateTax(amount: subTotal.toString(), taxModel: element);
-    }
-  }
-
-  double adminComm = 0.0;
-  if (orderModel.adminCommission!.isNotEmpty) {
-    adminComm = (orderModel.adminCommissionType!.toLowerCase() ==
-                'Percent'.toLowerCase() ||
-            orderModel.adminCommissionType!.toLowerCase() ==
-                'percentage'.toLowerCase())
-        ? (subTotal * double.parse(orderModel.adminCommission!)) / 100
-        : double.parse(orderModel.adminCommission!);
-  }
-
-  print("--->finalAmount---- $subTotal");
-  print("--->admin commison---- $adminComm");
-  print("--->Tax---- $totalTax");
-  double driverAmount = 0;
-
-  if (orderModel.paymentMethod.toLowerCase() != "cod") {
-    driverAmount = (subTotal + totalTax) - adminComm;
-  } else {
-    // driverAmount = -(subTotal + totalTax + adminComm);
-    driverAmount = -((subTotal + totalTax) - adminComm);
-  }
-
-  print("----->$driverAmount");
-
-  print("--->driverAmount---- $driverAmount");
-
-  // if (orderModel.driver!.companyId.isNotEmpty) {
-  //   FireStoreUtils.updateCompanyWalletAmount(companyId: MyAppState.currentUser!.companyId, amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
-  // } else {
-  FireStoreUtils.updateCurrentUserWallet(
-      userId: orderModel.driverID!,
-      amount: num.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
-  // }
-  //FireStoreUtils.rentalOrderTransaction(orderModel: orderModel, driveramount: double.parse(driverAmount.toStringAsFixed(currencyData!.decimal)));
-}
 
 /*double getTaxValue(TaxModel? taxModel, double amount) {
   double taxVal = 0;

@@ -3,14 +3,11 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:emartdriver/main.dart';
-import 'package:emartdriver/rental_service/rental_service_dashboard.dart';
 import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/ui/chat_screen/chat_screen.dart';
-import 'package:emartdriver/ui/home/HomeScreen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:get/get.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:emartdriver/ui/container/ContainerScreen.dart';
 
@@ -117,13 +114,7 @@ class NotificationService {
         log(message.notification.toString());
 
         String orderId = message.data['orderId'];
-        if (message.data['type'] == 'rental_order') {
-          pushReplacement(
-              navigatorKey.currentContext!,
-              RentalServiceDashBoard(
-                user: MyAppState.currentUser!,
-              ));
-        } else if (message.data['subject'] == 'New Order') {
+        if (message.data['subject'] == 'New Order') {
           // Em vez de navegar para uma nova tela, vamos mostrar o popup no HomeScreen
           if (navigatorKey.currentContext != null) {
             // Encontra o HomeScreen na pilha de navegação

@@ -2,9 +2,9 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:emartdriver/constants.dart';
 import 'package:emartdriver/main.dart';
 import 'package:emartdriver/model/User.dart';
-import 'package:emartdriver/model/CarMakes.dart';
-import 'package:emartdriver/model/CarModel.dart';
-import 'package:emartdriver/model/Vehicle_Types.dart';
+import 'package:emartdriver/model/VehicleMake.dart';
+import 'package:emartdriver/model/VehicleTypeModel.dart';
+import 'package:emartdriver/model/VehicleModel.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/ui/reauthScreen/reauth_user_screen.dart';
@@ -32,12 +32,12 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   String? firstName, lastName, carName, carPlate, email, mobile, carColor;
 
   // New variables for dropdowns
-  List<VehicleTypes> vehiclesList = [];
-  List<CarMakes> carMakesList = [];
-  List<CarModel> carModelList = [];
-  VehicleTypes? selectedVehicle;
-  CarMakes? selectedCarMakes;
-  CarModel? selectedCarModel;
+  List<VehicleTypeModel> vehiclesList = [];
+  List<VehicleMake> carMakesList = [];
+  List<VehicleModel> carModelList = [];
+  VehicleTypeModel? selectedVehicle;
+  VehicleMake? selectedCarMakes;
+  VehicleModel? selectedCarModel;
 
   // Car colors list
   final List<String> carColors = [
@@ -207,7 +207,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                           label: 'Vehicle Type',
                           value: selectedVehicle,
                           items: vehiclesList,
-                          onChanged: (VehicleTypes? value) {
+                          onChanged: (VehicleTypeModel? value) {
                             setState(() {
                               selectedVehicle = value;
                             });
@@ -218,7 +218,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                           label: 'Car Make',
                           value: selectedCarMakes,
                           items: carMakesList,
-                          onChanged: (CarMakes? value) async {
+                          onChanged: (VehicleMake? value) async {
                             setState(() {
                               selectedCarMakes = value;
                               carModelList.clear();
@@ -236,7 +236,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                           label: 'Car Model',
                           value: selectedCarModel,
                           items: carModelList,
-                          onChanged: (CarModel? value) {
+                          onChanged: (VehicleModel? value) {
                             setState(() {
                               selectedCarModel = value;
                             });
@@ -498,11 +498,11 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
         ),
         items: items.map((T item) {
           String displayText = '';
-          if (item is VehicleTypes) {
+          if (item is VehicleTypeModel) {
             displayText = item.name ?? '';
-          } else if (item is CarMakes) {
+          } else if (item is VehicleMake) {
             displayText = item.name ?? '';
-          } else if (item is CarModel) {
+          } else if (item is VehicleModel) {
             displayText = item.name ?? '';
           } else {
             displayText = item.toString();

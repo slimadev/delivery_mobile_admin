@@ -4,18 +4,12 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:emartdriver/CabService/cab_order_detail_screen.dart';
-import 'package:emartdriver/Parcel_service/parcel_order_detail_screen.dart';
-import 'package:emartdriver/Parcel_service/parcel_order_model.dart';
-import 'package:emartdriver/model/CabOrderModel.dart';
+
 import 'package:emartdriver/model/FlutterWaveSettingDataModel.dart';
 import 'package:emartdriver/model/MercadoPagoSettingsModel.dart';
 import 'package:emartdriver/model/PayFastSettingData.dart';
 import 'package:emartdriver/model/PayStackSettingsModel.dart';
-import 'package:emartdriver/model/StripePayFailedModel.dart';
-import 'package:emartdriver/model/createRazorPayOrderModel.dart';
-import 'package:emartdriver/model/getPaytmTxtToken.dart';
-import 'package:emartdriver/model/payStackURLModel.dart';
+
 import 'package:emartdriver/model/payment_model/mid_trans.dart';
 import 'package:emartdriver/model/payment_model/orange_money.dart';
 import 'package:emartdriver/model/payment_model/xendit.dart';
@@ -25,17 +19,8 @@ import 'package:emartdriver/model/razorpayKeyModel.dart';
 import 'package:emartdriver/model/stripeSettingData.dart';
 import 'package:emartdriver/model/withdrawHistoryModel.dart';
 import 'package:emartdriver/model/withdraw_method_model.dart';
-import 'package:emartdriver/model/OrderModel.dart';
-import 'package:emartdriver/payment/midtrans_screen.dart';
-import 'package:emartdriver/payment/orangePayScreen.dart';
-import 'package:emartdriver/payment/xenditModel.dart';
-import 'package:emartdriver/payment/xenditScreen.dart';
-import 'package:emartdriver/rental_service/model/rental_order_model.dart';
-import 'package:emartdriver/rental_service/renatal_summary_screen.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
-import 'package:emartdriver/services/payStackScreen.dart';
-import 'package:emartdriver/services/paystack_url_genrater.dart';
 import 'package:emartdriver/services/show_toast_dialog.dart';
 import 'package:emartdriver/theme/app_them_data.dart';
 import 'package:emartdriver/ui/topup/TopUpScreen.dart';
@@ -65,6 +50,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:emartdriver/ui/container/ContainerScreen.dart';
 import 'package:mpesa_sdk_dart/mpesa_sdk_dart.dart';
 import 'package:emartdriver/ui/wallet/mpesa_withdraw_screen.dart';
+import 'package:emartdriver/ui/ordersScreen/OrdersScreen.dart';
+import 'package:emartdriver/model/OrderModel.dart';
+
 // import 'package:pdf/widgets.dart' as pw;
 // import 'package:printing/printing.dart';
 
@@ -754,47 +742,32 @@ class WalletScreenState extends State<WalletScreen> {
                         ),
                         GestureDetector(
                           onTap: () async {
+                            // if (MyAppState.currentUser!.serviceType ==
+                            //     "cab-service") {
+                            //   await FireStoreUtils.firestore
+                            //       .collection(RIDESORDER)
+                            //       .doc(orderModel.id)
+                            //       .get()
+                            //       .then((value) {
+                            //     CabOrderModel orderModel =
+                            //         CabOrderModel.fromJson(value.data()!);
+                            //     push(
+                            //         context,
+                            //         CabOrderDetailScreen(
+                            //             orderModel: orderModel));
+                            //   });
+                            // } else
                             if (MyAppState.currentUser!.serviceType ==
-                                "cab-service") {
-                              await FireStoreUtils.firestore
-                                  .collection(RIDESORDER)
-                                  .doc(orderModel.id)
-                                  .get()
-                                  .then((value) {
-                                CabOrderModel orderModel =
-                                    CabOrderModel.fromJson(value.data()!);
-                                push(
-                                    context,
-                                    CabOrderDetailScreen(
-                                        orderModel: orderModel));
-                              });
-                            } else if (MyAppState.currentUser!.serviceType ==
-                                "parcel_delivery") {
+                                "delivery-ervice") {
                               await FireStoreUtils.firestore
                                   .collection(PARCELORDER)
                                   .doc(orderModel.id)
                                   .get()
                                   .then((value) {
-                                ParcelOrderModel orderModel =
-                                    ParcelOrderModel.fromJson(value.data()!);
-                                push(
-                                    context,
-                                    ParcelOrderDetailScreen(
-                                        orderModel: orderModel));
-                              });
-                            } else if (MyAppState.currentUser!.serviceType ==
-                                "rental-service") {
-                              await FireStoreUtils.firestore
-                                  .collection(RENTALORDER)
-                                  .doc(orderModel.id)
-                                  .get()
-                                  .then((value) {
-                                RentalOrderModel orderModel =
-                                    RentalOrderModel.fromJson(value.data()!);
-                                push(
-                                    context,
-                                    RenatalSummaryScreen(
-                                        rentalOrderModel: orderModel));
+                                OrderModel orderModel =
+                                    OrderModel.fromJson(value.data()!);
+                                push(context,
+                                    OrderDetailScreen(order: orderModel));
                               });
                             }
                           },

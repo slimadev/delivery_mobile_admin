@@ -1,65 +1,53 @@
-
-import 'package:emartdriver/model/admin_commission_model.dart';
+import 'package:emartdriver/model/VendorCategory.dart';
 
 class SectionModel {
-  String? referralAmount;
-  String? serviceType;
-  String? color;
+  dynamic id;
   String? name;
-  String? sectionImage;
-  String? id;
   bool? isActive;
-  bool? dineInActive;
+  bool? delected;
   String? serviceTypeFlag;
-  String? delivery_charge;
-  int? nearByRadius;
-  AdminCommissionModel? adminCommision;
 
-  SectionModel(
-      {this.referralAmount,
-        this.serviceType,
-        this.color,
-        this.name,
-        this.sectionImage,
-        this.id,
-        this.isActive,
-        this.adminCommision,
-        this.dineInActive,
-        this.delivery_charge,
-        this.nearByRadius,
-        this.serviceTypeFlag});
+  List<VendorCategory>? categories;
+
+  SectionModel({
+    this.id,
+    this.name,
+    this.isActive,
+    this.delected,
+    this.serviceTypeFlag,
+    this.categories,
+  });
 
   SectionModel.fromJson(Map<String, dynamic> json) {
-    referralAmount = json['referralAmount'] ?? '';
-    serviceType = json['serviceType'] ?? '';
-    color = json['color'];
-    name = json['name'];
-    sectionImage = json['sectionImage'];
     id = json['id'];
-    adminCommision = json.containsKey('adminCommision') ? AdminCommissionModel.fromJson(json['adminCommision']) : null;
-    isActive = json['isActive'];
-    dineInActive = json['dine_in_active'] ?? false;
-    serviceTypeFlag = json['serviceTypeFlag'] ?? '';
-    delivery_charge = json['delivery_charge'] ?? '';
-    nearByRadius = json['nearByRadius'] ?? '50000';
+    name = json['name'];
+    isActive = json['active']; // API usa 'active', não 'isActive'
+    delected = json['delected'];
+    serviceTypeFlag = json['service_type_flag'];
+
+    // Processar categories se existir
+    if (json['categories'] != null) {
+      categories = (json['categories'] as List)
+          .map((category) => VendorCategory.fromJson(category))
+          .toList();
+    }
+
+    // Campo opcional de comissão
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
-    data['referralAmount'] = referralAmount;
-    data['serviceType'] = serviceType;
-    data['color'] = color;
-    data['name'] = name;
-    data['sectionImage'] = sectionImage;
-    if (adminCommision != null) {
-      data['adminCommision'] = adminCommision!.toJson();
-    }
     data['id'] = id;
-    data['isActive'] = isActive;
-    data['dine_in_active'] = dineInActive;
-    data['serviceTypeFlag'] = serviceTypeFlag;
-    data['delivery_charge'] = delivery_charge;
-    data['nearByRadius'] = nearByRadius;
+    data['name'] = name;
+    data['active'] = isActive;
+    data['delected'] = delected;
+    data['service_type_flag'] = serviceTypeFlag;
+
+    if (categories != null) {
+      data['categories'] =
+          categories!.map((category) => category.toJson()).toList();
+    }
+
     return data;
   }
 }

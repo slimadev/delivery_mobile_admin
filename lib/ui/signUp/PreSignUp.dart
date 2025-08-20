@@ -6,28 +6,26 @@ import 'package:easy_localization/easy_localization.dart' as Easy;
 
 import 'package:emartdriver/constants.dart';
 import 'package:emartdriver/main.dart';
-import 'package:emartdriver/model/CarMakes.dart';
-import 'package:emartdriver/model/CarModel.dart';
 import 'package:emartdriver/model/SectionModel.dart';
-import 'package:emartdriver/model/VehicleType.dart';
-import 'package:emartdriver/rental_service/rental_service_dashboard.dart';
+import 'package:emartdriver/model/VehicleMake.dart';
+import 'package:emartdriver/model/VehicleModel.dart';
+import 'package:emartdriver/model/VehicleTypeModel.dart';
+
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
-import 'package:emartdriver/services/show_toast_dialog.dart';
-import 'package:emartdriver/ui/auth/AuthScreen.dart';
-import 'package:emartdriver/ui/container/ContainerScreen.dart';
-import 'package:emartdriver/ui/phoneAuth/PhoneNumberInputScreen.dart';
+
 import 'package:emartdriver/ui/signUp/SignUpScreen.dart';
-import 'package:firebase_auth/firebase_auth.dart' as auth;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl_phone_number_input/intl_phone_number_input.dart';
-import 'package:pin_code_fields/pin_code_fields.dart';
+
 import 'package:emartdriver/theme/app_them_data.dart';
-import '../../model/User.dart';
-import '../../model/Vehicle_Types.dart';
+
 import 'package:emartdriver/ui/signUp/FirstStepsScreen.dart';
+import 'package:emartdriver/repositories/vehicle_type_repository.dart';
+import 'package:emartdriver/repositories/vehicle_make_repository.dart';
+import 'package:emartdriver/repositories/section_repository.dart';
 
 class PreSignUpScreen extends StatefulWidget {
   final bool waiting;
@@ -70,17 +68,17 @@ class _PreSignUpScreenState extends State<PreSignUpScreen> {
   ];
   String? _selectedServiceType;
 
-  List<VehicleTypes> vehiclesList = [];
-  List<CarMakes> carMakesList = [];
-  List<CarModel> carModelList = [];
+  List<VehicleTypeModel> vehiclesList = [];
+  List<VehicleMake> carMakesList = [];
+  List<VehicleModel> carModelList = [];
 
-  CarMakes? selectedCarMakes;
-  CarModel? selectedCarModel;
-  VehicleTypes? selectedVehicle;
-  List<VehicleType> vehicleType = [];
-  List<VehicleType> rentalVehicleType = [];
-  VehicleType? selectedRentalVehicleType;
-  VehicleType? selectedVehicleType;
+  VehicleMake? selectedCarMakes;
+  VehicleModel? selectedCarModel;
+  VehicleTypeModel? selectedVehicle;
+  List<VehicleTypeModel> vehicleType = [];
+  List<VehicleTypeModel> rentalVehicleType = [];
+  VehicleTypeModel? selectedRentalVehicleType;
+  VehicleTypeModel? selectedVehicleType;
 
   List<SectionModel>? sectionsVal = [];
   SectionModel? selectedSection;
@@ -103,7 +101,7 @@ class _PreSignUpScreenState extends State<PreSignUpScreen> {
   }
 
   getVehicles() async {
-    await FireStoreUtils.getVehicles().then((value) {
+    await VehicleTypeRepository.getVehicleTypes().then((value) {
       if (mounted) {
         setState(() {
           vehiclesList = value;
@@ -113,7 +111,7 @@ class _PreSignUpScreenState extends State<PreSignUpScreen> {
   }
 
   getCarMakes() async {
-    await FireStoreUtils.getCarMakes().then((value) {
+    await VehicleMakeRepository.getVehicleMakes().then((value) {
       if (mounted) {
         setState(() {
           carMakesList = value;
@@ -129,7 +127,7 @@ class _PreSignUpScreenState extends State<PreSignUpScreen> {
       }
     });
 
-    await FireStoreUtils.getSections().then((value) {
+    await SectionRepository.getSections().then((value) {
       if (mounted) {
         setState(() {
           sectionsVal = value;
