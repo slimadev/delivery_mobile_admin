@@ -7,6 +7,7 @@ import 'package:emartdriver/main.dart';
 import 'package:emartdriver/model/User.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
+import 'package:emartdriver/userPrefrence.dart';
 import 'package:emartdriver/services/show_toast_dialog.dart';
 import 'package:emartdriver/theme/app_them_data.dart';
 import 'package:emartdriver/ui/accountDetails/AccountDetailsScreen.dart';
@@ -209,6 +210,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   user.lastOnlineTimestamp = Timestamp.now();
                   await FireStoreUtils.updateCurrentUser(user);
                   await auth.FirebaseAuth.instance.signOut();
+                  // Limpa o token do usuário
+                  UserPreference.removeUserToken();
                   MyAppState.currentUser = null;
                   pushAndRemoveUntil(
                       context, PhoneNumberInputScreen(login: false), false);
@@ -413,6 +416,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           user.lastOnlineTimestamp = Timestamp.now();
                           await FireStoreUtils.updateCurrentUser(user);
                           await auth.FirebaseAuth.instance.signOut();
+                          // Limpa o token do usuário
+                          UserPreference.removeUserToken();
                           MyAppState.currentUser = null;
                           Navigator.pop(context);
                           pushAndRemoveUntil(context,

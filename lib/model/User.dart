@@ -26,6 +26,7 @@ class User with ChangeNotifier {
   String nuitPictureURL;
   String appIdentifier;
   String fcmToken;
+  String authToken; // Token de autenticação da API
   UserLocation location;
   List<AddressModel>? shippingAddress = [];
   String role;
@@ -93,6 +94,7 @@ class User with ChangeNotifier {
     lastOnlineTimestamp,
     settings,
     this.fcmToken = '',
+    this.authToken = '',
     location,
     this.shippingAddress,
     this.role = USER_ROLE_DRIVER,

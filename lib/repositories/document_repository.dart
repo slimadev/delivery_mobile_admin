@@ -1,11 +1,11 @@
 import 'package:emartdriver/model/DocumentModel.dart';
 import 'package:emartdriver/services/api_service.dart';
+import 'package:emartdriver/config/api_config.dart';
 
 class DocumentRepository {
   static Future<List<DocumentModel>> getRequiredDocuments() async {
     try {
-      final response =
-          await ApiService.getExternal('api/partners/driver-document-types/');
+      final response = await ApiService.get('${ApiConfig.driverDocumentTypes}');
 
       if (response is List) {
         // Filtra apenas documentos para motoristas ou para todos

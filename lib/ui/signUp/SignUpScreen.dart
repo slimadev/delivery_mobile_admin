@@ -25,7 +25,6 @@ import 'package:intl/intl.dart';
 import 'package:emartdriver/services/show_toast_dialog.dart';
 import 'package:emartdriver/repositories/vehicle_make_repository.dart';
 import 'package:emartdriver/repositories/vehicle_type_repository.dart';
-import 'package:emartdriver/repositories/section_repository.dart';
 
 File? _image;
 File? _carImage;
@@ -105,12 +104,6 @@ class _SignUpState extends State<SignUpScreen> {
     await FireStoreUtils.getRentalVehicleType().then((value) {
       setState(() {
         rentalVehicleType = value;
-      });
-    });
-
-    await SectionRepository.getSections().then((value) {
-      setState(() {
-        sectionsVal = value;
       });
     });
   }

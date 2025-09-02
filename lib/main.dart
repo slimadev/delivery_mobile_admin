@@ -10,6 +10,7 @@ import 'package:emartdriver/model/mail_setting.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/services/notification_service.dart';
+
 import 'package:emartdriver/theme/app_them_data.dart';
 import 'package:emartdriver/ui/auth/AuthScreen.dart';
 import 'package:emartdriver/ui/container/ContainerScreen.dart';
@@ -24,6 +25,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'model/User.dart';
+import 'ui/phoneAuth/PhoneNumberInputScreen.dart';
+import 'repositories/user_repository.dart';
 
 final GlobalKey<NavigatorState> navigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'Main Navigator');
@@ -274,39 +277,36 @@ class OnBoarding extends StatefulWidget {
 }
 
 class OnBoardingState extends State<OnBoarding> {
+  @override
   Future hasFinishedOnBoarding() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool finishedOnBoarding = (prefs.getBool(FINISHED_ON_BOARDING) ?? false);
+    bool authenticated = (prefs.getBool(AUTHENTICATED) ?? false);
+    bool registerFinished = (prefs.getBool(REGISTER_FINISHED) ?? false);
+    String? userToken = prefs.getString(USER_TOKEN);
 
     if (finishedOnBoarding) {
-      auth.User? firebaseUser = auth.FirebaseAuth.instance.currentUser;
-      if (firebaseUser != null) {
-        User? user = await FireStoreUtils.getCurrentUser(firebaseUser.uid);
-        if (user != null && user.role == USER_ROLE_DRIVER) {
-          if (user.active) {
-            user.isActive = true;
-            user.role = USER_ROLE_DRIVER;
-            user.fcmToken =
-                await FireStoreUtils.firebaseMessaging.getToken() ?? '';
-            await FireStoreUtils.updateCurrentUser(user);
-            MyAppState.currentUser = user;
-            pushAndRemoveUntil(context, ContainerScreen(user: user), false);
-          } else {
-            user.isActive = false;
-            user.lastOnlineTimestamp = Timestamp.now();
-            await FireStoreUtils.updateCurrentUser(user);
-            await auth.FirebaseAuth.instance.signOut();
-            MyAppState.currentUser = null;
-            pushAndRemoveUntil(context, AuthScreen(), false);
-          }
-        } else {
-          pushReplacement(context, AuthScreen());
+      if (userToken != null && userToken.isNotEmpty) {
+        User? savedUser = await UserRepository.getUserProfile(userToken);
+        if (savedUser != null && savedUser.role == USER_ROLE_DRIVER) {
+          MyAppState.currentUser = savedUser;
+          pushAndRemoveUntil(context, ContainerScreen(user: savedUser), false);
+          return;
         }
       } else {
-        pushReplacement(context, AuthScreen());
+        if (authenticated) {
+          pushReplacement(context, PhoneNumberInputScreen(login: true));
+          return;
+        } else if (registerFinished) {
+          pushReplacement(context, AuthScreen());
+          return;
+        }
       }
+      pushReplacement(context, PhoneNumberInputScreen(login: false));
+      return;
     } else {
       pushReplacement(context, OnBoardingScreen());
+      return;
     }
   }
 

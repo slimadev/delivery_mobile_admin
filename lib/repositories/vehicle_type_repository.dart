@@ -1,8 +1,10 @@
 import 'package:emartdriver/model/VehicleTypeModel.dart';
 import 'package:emartdriver/services/api_service.dart';
 
+import 'package:emartdriver/config/api_config.dart';
+
 class VehicleTypeRepository {
-  static const String _endpoint = '/vehicle-types/';
+  static const String _endpoint = ApiConfig.vehicleTypes;
 
   static Future<List<VehicleTypeModel>> getVehicleTypes() async {
     try {

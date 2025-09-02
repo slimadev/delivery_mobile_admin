@@ -7,6 +7,7 @@ import 'package:emartdriver/ui/auth/AuthScreen.dart';
 import 'package:emartdriver/ui/phoneAuth/PhoneNumberInputScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:emartdriver/ui/signUp/PreSignUp.dart';
+import 'package:emartdriver/userPrefrence.dart';
 
 class OnBoardingScreen extends StatefulWidget {
   const OnBoardingScreen({Key? key}) : super(key: key);
@@ -43,7 +44,10 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                 height: 5,
                 color: Colors.white,
                 textColor: Colors.green,
-                onPress: () {
+                onPress: () async {
+                  // Marca o onboarding como finalizado
+                  await UserPreference.setFinishedOnBoarding(finished: true);
+                  // Navega para a tela de registro
                   pushReplacement(
                       context, PhoneNumberInputScreen(login: false));
                 },

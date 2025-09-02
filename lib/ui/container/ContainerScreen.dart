@@ -3,16 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:emartdriver/constants.dart';
 import 'package:emartdriver/main.dart';
-import 'package:emartdriver/model/CurrencyModel.dart';
 import 'package:emartdriver/model/User.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
+import 'package:emartdriver/userPrefrence.dart';
 import 'package:emartdriver/theme/app_them_data.dart';
-import 'package:emartdriver/ui/Language/language_choose_screen.dart';
-import 'package:emartdriver/ui/auth/AuthScreen.dart';
-import 'package:emartdriver/ui/bank_details/bank_details_Screen.dart';
 import 'package:emartdriver/ui/chat/SupportChatScreen.dart';
-import 'package:emartdriver/ui/chat_screen/inbox_screen.dart';
 import 'package:emartdriver/ui/home/HomeScreen.dart';
 import 'package:emartdriver/ui/ordersScreen/OrdersScreen.dart';
 import 'package:emartdriver/ui/privacy_policy/privacy_policy.dart';
@@ -94,19 +90,6 @@ class _ContainerScreen extends State<ContainerScreen> {
             currencyData = element;
           }
         }));*/
-    await FireStoreUtils().getRazorPayDemo();
-    await FireStoreUtils.getPaypalSettingData();
-    await FireStoreUtils.getStripeSettingData();
-    await FireStoreUtils.getPayStackSettingData();
-    await FireStoreUtils.getFlutterWaveSettingData();
-    await FireStoreUtils.getPaytmSettingData();
-    await FireStoreUtils.getWalletSettingData();
-    await FireStoreUtils.getPayFastSettingData();
-    await FireStoreUtils.getMercadoPagoSettingData();
-    await FireStoreUtils.getDriverOrderSetting();
-    await FireStoreUtils.getOrangeMoneySettingData();
-    await FireStoreUtils.getXenditSettingData();
-    await FireStoreUtils.getMidTransSettingData();
 
     setState(() {
       isLoading = false;
@@ -659,6 +642,8 @@ class _ContainerScreen extends State<ContainerScreen> {
                           await FireStoreUtils.updateCurrentUser(
                               MyAppState.currentUser!);
                           await auth.FirebaseAuth.instance.signOut();
+                          // Limpa o token do usuário
+                          UserPreference.removeUserToken();
                           MyAppState.currentUser = null;
                           location.enableBackgroundMode(enable: false);
                           pushAndRemoveUntil(context,

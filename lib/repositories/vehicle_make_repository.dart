@@ -1,8 +1,10 @@
 import 'package:emartdriver/model/VehicleMake.dart';
 import 'package:emartdriver/services/api_service.dart';
 
+import 'package:emartdriver/config/api_config.dart';
+
 class VehicleMakeRepository {
-  static const String _endpoint = '/vehicle-makers/';
+  static const String _endpoint = ApiConfig.vehicleMakers;
 
   // Buscar todas as marcas de veículo
   static Future<List<VehicleMake>> getVehicleMakes() async {

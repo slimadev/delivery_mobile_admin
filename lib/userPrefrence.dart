@@ -210,4 +210,41 @@ class UserPreference {
     final String? paymentId = _preferences.getString(_paymentId);
     return paymentId != null ? paymentId : "";
   }
+
+  // Métodos para gerenciar o token do usuário
+  static const _userToken = "userToken";
+
+  static setUserToken({required String token}) {
+    _preferences.setString(_userToken, token);
+  }
+
+  static String? getUserToken() {
+    return _preferences.getString(_userToken);
+  }
+
+  static removeUserToken() {
+    _preferences.remove(_userToken);
+  }
+
+  // Métodos para gerenciar o status de registro
+  static const _registerFinished = "registerFinished";
+
+  static setRegisterFinished({required bool finished}) {
+    _preferences.setBool(_registerFinished, finished);
+  }
+
+  static bool getRegisterFinished() {
+    return _preferences.getBool(_registerFinished) ?? false;
+  }
+
+  // Métodos para gerenciar o status de onboarding
+  static const _finishedOnBoarding = "finishedOnBoarding";
+
+  static setFinishedOnBoarding({required bool finished}) {
+    _preferences.setBool(_finishedOnBoarding, finished);
+  }
+
+  static bool getFinishedOnBoarding() {
+    return _preferences.getBool(_finishedOnBoarding) ?? false;
+  }
 }

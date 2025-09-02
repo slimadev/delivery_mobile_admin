@@ -1,8 +1,9 @@
 import 'package:emartdriver/model/OrderModel.dart';
 import 'package:emartdriver/services/api_service.dart';
+import 'package:emartdriver/config/api_config.dart';
 
 class OrderRepository {
-  static const String _endpoint = '/orders/';
+  static const String _endpoint = '/api/orders/';
 
   // Buscar todos os pedidos
   static Future<List<OrderModel>> getAllOrders() async {

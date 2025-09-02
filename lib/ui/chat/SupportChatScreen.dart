@@ -9,6 +9,7 @@ import 'package:emartdriver/main.dart';
 import 'package:emartdriver/model/User.dart';
 import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
+import 'package:emartdriver/services/session_service.dart';
 import 'package:emartdriver/theme/app_them_data.dart';
 import 'package:emartdriver/ui/fullScreenImageViewer/FullScreenImageViewer.dart';
 import 'package:emartdriver/ui/fullScreenVideoViewer/FullScreenVideoViewer.dart';
@@ -281,6 +282,8 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                 if (shouldLogout != true) return;
                 Navigator.pop(context);
                 await auth.FirebaseAuth.instance.signOut();
+                // Limpa a sessão do usuário
+                await SessionService.clearUserSession();
                 MyAppState.currentUser = null;
                 pushAndRemoveUntil(
                     context, PhoneNumberInputScreen(login: false), false);

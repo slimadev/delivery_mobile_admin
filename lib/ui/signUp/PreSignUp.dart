@@ -25,7 +25,6 @@ import 'package:emartdriver/theme/app_them_data.dart';
 import 'package:emartdriver/ui/signUp/FirstStepsScreen.dart';
 import 'package:emartdriver/repositories/vehicle_type_repository.dart';
 import 'package:emartdriver/repositories/vehicle_make_repository.dart';
-import 'package:emartdriver/repositories/section_repository.dart';
 
 class PreSignUpScreen extends StatefulWidget {
   final bool waiting;
@@ -123,14 +122,6 @@ class _PreSignUpScreenState extends State<PreSignUpScreen> {
       if (mounted) {
         setState(() {
           rentalVehicleType = value;
-        });
-      }
-    });
-
-    await SectionRepository.getSections().then((value) {
-      if (mounted) {
-        setState(() {
-          sectionsVal = value;
         });
       }
     });

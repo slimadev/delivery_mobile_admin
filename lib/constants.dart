@@ -7,6 +7,9 @@ import 'package:mailer/smtp_server.dart';
 import 'model/CurrencyModel.dart';
 
 const FINISHED_ON_BOARDING = 'finishedOnBoarding';
+const REGISTER_FINISHED = 'registerFinished';
+const USER_TOKEN = 'userToken';
+const AUTHENTICATED = 'authenticated';
 LocationData? locationDataFinal;
 
 const COLOR_ACCENT = 0xFF8fd468;

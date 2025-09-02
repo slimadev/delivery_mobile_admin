@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:the_apple_sign_in/the_apple_sign_in.dart' as apple;
 import 'package:emartdriver/userPrefrence.dart';
 import 'package:emartdriver/services/show_toast_dialog.dart';
+import 'package:emartdriver/services/session_service.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -314,6 +315,8 @@ class _LoginScreen extends State<LoginScreen> {
       if (user != null) {
         MyAppState.currentUser = user;
         UserPreference.setUserId(userID: user.userID);
+        // Salva o token do usuário
+        UserPreference.setUserToken(token: user.userID);
         if (MyAppState.currentUser!.role == USER_ROLE_DRIVER) {
           // if (MyAppState.currentUser!.serviceType == "cab-service") {
           //   pushAndRemoveUntil(context, DashBoardCabService(), false);
@@ -356,6 +359,8 @@ class _LoginScreen extends State<LoginScreen> {
     if (user != null) {
       MyAppState.currentUser = user;
       UserPreference.setUserId(userID: user.userID);
+      // Salva o token do usuário
+      UserPreference.setUserToken(token: user.userID);
       if (MyAppState.currentUser!.role == USER_ROLE_DRIVER) {
         // if (MyAppState.currentUser!.serviceType == "cab-service") {
         //   pushAndRemoveUntil(context, DashBoardCabService(), false);
@@ -385,6 +390,8 @@ class _LoginScreen extends State<LoginScreen> {
     if (user != null) {
       MyAppState.currentUser = user;
       UserPreference.setUserId(userID: user.userID);
+      // Salva o token do usuário
+      UserPreference.setUserToken(token: user.userID);
       if (MyAppState.currentUser!.role == USER_ROLE_DRIVER) {
         // if (MyAppState.currentUser!.serviceType == "cab-service") {
         //   pushAndRemoveUntil(context, DashBoardCabService(), false);

@@ -1,46 +1,33 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:emartdriver/config/api_config.dart';
+import 'package:emartdriver/userPrefrence.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.1.25.56:8000/api/drivers';
-  static const String externalBaseUrl = 'http://10.1.25.56:8000/';
-
-  // Headers padrão
-  static Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+  // Headers com autenticação (funciona com ou sem token)
+  static Map<String, String> get _authHeaders {
+    final token = UserPreference.getUserToken();
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
 
   // GET request
   static Future<dynamic> get(String endpoint) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: _headers,
+        Uri.parse('${ApiConfig.baseUrl}$endpoint'),
+        headers: _authHeaders,
       );
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        throw Exception('Erro na requisição: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Erro de conexão: $e');
-    }
-  }
-
-  static Future<dynamic> getExternal(String endpoint) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$externalBaseUrl$endpoint'),
-        headers: _headers,
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erro na requisição: ${response.statusCode}');
+        throw Exception(
+            'Erro na requisição: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       throw Exception('Erro de conexão: $e');
@@ -51,9 +38,10 @@ class ApiService {
   static Future<dynamic> post(
       String endpoint, Map<String, dynamic> data) async {
     try {
+      print('headers: ${_authHeaders}');
       final response = await http.post(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: _headers,
+        Uri.parse('${ApiConfig.baseUrl}$endpoint'),
+        headers: _authHeaders,
         body: json.encode(data),
       );
 
@@ -61,7 +49,7 @@ class ApiService {
         return json.decode(response.body);
       } else {
         throw Exception(
-            'Erro na requisição: ${response.statusCode} ${response.body}');
+            'Erro na requisição: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       throw Exception('Erro de conexão: $e');
@@ -72,15 +60,16 @@ class ApiService {
   static Future<dynamic> put(String endpoint, Map<String, dynamic> data) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: _headers,
+        Uri.parse('${ApiConfig.baseUrl}$endpoint'),
+        headers: _authHeaders,
         body: json.encode(data),
       );
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        throw Exception('Erro na requisição: ${response.statusCode}');
+        throw Exception(
+            'Erro na requisição: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       throw Exception('Erro de conexão: $e');
@@ -91,8 +80,8 @@ class ApiService {
   static Future<bool> delete(String endpoint) async {
     try {
       final response = await http.delete(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: _headers,
+        Uri.parse('${ApiConfig.baseUrl}$endpoint'),
+        headers: _authHeaders,
       );
 
       return response.statusCode == 200 || response.statusCode == 204;
@@ -109,11 +98,17 @@ class ApiService {
     List<Map<String, dynamic>> documents,
   ) async {
     try {
-      var request =
-          http.MultipartRequest('POST', Uri.parse('$baseUrl$endpoint'));
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('${ApiConfig.baseUrl}$endpoint'));
 
       // Adicionar headers sem Content-Type (será definido automaticamente)
       request.headers['Accept'] = 'application/json';
+
+      // Adicionar token de autenticação se disponível
+      final token = UserPreference.getUserToken();
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
 
       // Adicionar campos de texto
       data.forEach((key, value) {
@@ -185,7 +180,7 @@ class ApiService {
         return json.decode(response.body);
       } else {
         throw Exception(
-            'Erro na requisição: ${response.statusCode} ${response.body}');
+            'Erro na requisição: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       throw Exception('Erro de conexão: $e');
