@@ -26,7 +26,7 @@ import 'package:emartdriver/repositories/document_repository.dart';
 import 'package:emartdriver/model/DocumentModel.dart';
 import 'package:emartdriver/userPrefrence.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:emartdriver/userPrefrence.dart';
+import 'package:emartdriver/main.dart';
 
 File? _image;
 File? _carImage;
@@ -1600,7 +1600,6 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
 
     // Verificar se o usuário existe e está ativo antes de enviar código
     try {
-      print('login with phone number: ${_mobileController.text}');
       User? user = await UserRepository.login(
           _mobileController.text, _passwordController.text);
 
@@ -1609,13 +1608,14 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
         return;
       }
 
-      if (user.isActive == false) {
-        ShowToastDialog.showToast('This account is not active'.tr());
-        return;
-      }
+      // if (user.isActive == false) {
+      //   ShowToastDialog.showToast('This account is not active'.tr());
+      //   return;
+      // }
 
       // Salva o token do usuário e vai para ContainerScreen
       UserPreference.setUserToken(token: user.authToken);
+      MyAppState.currentUser = user;
       pushAndRemoveUntil(context, ContainerScreen(user: user), false);
     } catch (e) {
       ShowToastDialog.showToast('Error checking user: $e'.tr());

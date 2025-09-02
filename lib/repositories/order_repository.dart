@@ -45,33 +45,6 @@ class OrderRepository {
     }
   }
 
-  // Buscar pedidos por motorista
-  static Future<List<OrderModel>> getOrdersByDriver(String driverId) async {
-    try {
-      final response = await ApiService.get('$_endpoint?driverId=$driverId');
-      List<dynamic> ordersData =
-          response is List ? response as List<dynamic> : [];
-      return ordersData.map((json) => OrderModel.fromJson(json)).toList();
-    } catch (e) {
-      print('Erro ao buscar pedidos por motorista: $e');
-      return [];
-    }
-  }
-
-  // Criar novo pedido
-  static Future<OrderModel?> createOrder(OrderModel order) async {
-    try {
-      final response = await ApiService.post(_endpoint, order.toJson());
-      if (response != null) {
-        return OrderModel.fromJson(response);
-      }
-      return null;
-    } catch (e) {
-      print('Erro ao criar pedido: $e');
-      return null;
-    }
-  }
-
   // Atualizar pedido
   static Future<OrderModel?> updateOrder(String id, OrderModel order) async {
     try {
@@ -83,29 +56,6 @@ class OrderRepository {
     } catch (e) {
       print('Erro ao atualizar pedido: $e');
       return null;
-    }
-  }
-
-  // Deletar pedido
-  static Future<bool> deleteOrder(String id) async {
-    try {
-      return await ApiService.delete('$_endpoint$id/');
-    } catch (e) {
-      print('Erro ao deletar pedido: $e');
-      return false;
-    }
-  }
-
-  // Buscar pedidos pendentes
-  static Future<List<OrderModel>> getPendingOrders() async {
-    try {
-      final response = await ApiService.get('$_endpoint?status=pending');
-      List<dynamic> ordersData =
-          response is List ? response as List<dynamic> : [];
-      return ordersData.map((json) => OrderModel.fromJson(json)).toList();
-    } catch (e) {
-      print('Erro ao buscar pedidos pendentes: $e');
-      return [];
     }
   }
 

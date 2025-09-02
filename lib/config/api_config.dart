@@ -1,9 +1,9 @@
 class ApiConfig {
   // URLs base das APIs
-  static const String baseUrl = 'http://192.168.0.190:8000';
+  static const String baseUrl = 'http://192.168.30.224:8000/api';
 
   // Endpoints para Parceiros
-  static const String partnersBase = '/api/partners';
+  static const String partnersBase = '/partners';
   static const String documentTypes = '$partnersBase/document-types/';
   static const String driverDocumentTypes =
       '$partnersBase/driver-document-types/';
@@ -17,7 +17,7 @@ class ApiConfig {
   static const String profile = '$partnersBase/profile/';
 
   // Endpoints para Motoristas
-  static const String driversBase = '/api/drivers';
+  static const String driversBase = '/drivers';
   static const String vehicleMakers = '$driversBase/vehicle-makers/';
   static const String vehicleTypes = '$driversBase/vehicle-types/';
   static const String vehicleModels = '$driversBase/vehicle-models/';
@@ -25,13 +25,13 @@ class ApiConfig {
   static const String activateDriver = '$driversBase/activate-driver';
 
   // Endpoints para Vendedores
-  static const String vendorsBase = '/api/vendors';
+  static const String vendorsBase = '/vendors';
   static const String productsBySession = '$vendorsBase/products/by_session';
   static const String productsByCategory = '$vendorsBase/products/category';
   static const String favoriteProducts = '$vendorsBase/products/favorites';
 
   // Endpoints para Pedidos
-  static const String ordersBase = '/api/orders';
+  static const String ordersBase = '/orders';
   static const String createOrder = '$ordersBase/';
   static const String orderDetail = '$ordersBase';
   static const String pendingOrders = '$ordersBase/pending/';

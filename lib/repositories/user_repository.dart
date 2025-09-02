@@ -5,7 +5,6 @@ import 'package:emartdriver/services/session_service.dart';
 import 'package:emartdriver/userPrefrence.dart';
 import 'package:emartdriver/config/api_config.dart';
 import 'dart:io';
-import 'dart:convert';
 
 class UserRepository {
   // Buscar usuário por ID
@@ -25,13 +24,41 @@ class UserRepository {
   static Future<User?> getUserProfile(String token) async {
     try {
       final response = await ApiService.get('${ApiConfig.profile}');
-      print('Resposta do perfil: $response');
+
       if (response != null) {
-        return User.fromJson(response);
+        String fullName = response['name']?.toString().trim() ?? '';
+
+        // Dividir o nome em partes
+        List<String> nameParts = fullName.split(' ');
+        String firstName = nameParts.isNotEmpty ? nameParts[0] : '';
+        String lastName =
+            nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+
+        // Atualizar a resposta com firstName e lastName
+        response['firstName'] = firstName;
+        response['lastName'] = lastName;
+
+        // Criar o objeto User com os dados capturados
+        final user = User.fromJson(response);
+
+        return user;
       }
+
       return null;
     } catch (e) {
       print('Erro ao buscar usuário: $e');
+
+      // Verificar se é erro de autorização
+      if (e.toString().contains('unauthorized') ||
+          e.toString().contains('401') ||
+          e.toString().contains('Unauthorized') ||
+          e.toString().contains('Token') ||
+          e.toString().contains('token')) {
+        print('Erro de autorização detectado - token pode ter expirado');
+        // Re-throw o erro para que o main.dart possa tratá-lo
+        throw Exception('UNAUTHORIZED: Token expirado ou inválido');
+      }
+
       return null;
     }
   }
@@ -72,10 +99,10 @@ class UserRepository {
   }
 
   // Atualizar usuário
-  static Future<User?> updateUser(String id, User user) async {
+  static Future<User?> updateUser(User user) async {
     try {
       final response =
-          await ApiService.put('${ApiConfig.partnerById}/$id/', user.toJson());
+          await ApiService.put('${ApiConfig.partnerById}', user.toJson());
       if (response != null) {
         return User.fromJson(response);
       }

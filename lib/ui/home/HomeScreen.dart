@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'dart:math';
-
 import 'package:audioplayers/audioplayers.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:emartdriver/constants.dart';
@@ -15,29 +12,14 @@ import 'package:emartdriver/services/FirebaseHelper.dart';
 import 'package:emartdriver/services/helper.dart';
 import 'package:emartdriver/services/send_notification.dart';
 import 'package:emartdriver/theme/app_them_data.dart';
-import 'package:emartdriver/ui/chat_screen/chat_screen.dart';
 import 'package:emartdriver/ui/home/pick_order.dart';
-import 'package:emartdriver/widget/geoflutterfire/src/geoflutterfire.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:url_launcher/url_launcher.dart' as UrlLauncher;
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart' as osmflutter;
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:emartdriver/services/notification_service.dart';
-// import 'package:emartdriver/services/event_bus.dart';
-import 'package:emartdriver/ui/accountDetails/AccountDetailsScreen.dart';
-import 'package:emartdriver/ui/contactUs/ContactUsScreen.dart';
-// import 'package:emartdriver/ui/orderDetails/OrderDetailsScreen.dart';
-import 'package:emartdriver/ui/settings/SettingsScreen.dart';
-import 'package:emartdriver/ui/wallet/WalletScreen.dart';
-import 'package:just_audio/just_audio.dart' as just_audio;
-import 'package:location/location.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:slide_to_act/slide_to_act.dart';
 import 'package:emartdriver/ui/coleta/ColetaScreen.dart';
 import 'package:emartdriver/ui/entrega/EntregaScreen.dart';
@@ -73,7 +55,7 @@ class HomeScreenState extends State<HomeScreen> {
   OrderModel? currentOrder;
 
   late Stream<User> driverStream;
-  User? _driverModel = User();
+
   double kilometer = 0.0;
 
   Timer? _timer;
@@ -90,21 +72,6 @@ class HomeScreenState extends State<HomeScreen> {
   int? rejectedRidesCount;
 
   late BuildContext rootContext;
-
-  void getDriver() {
-    // Implementação da lógica para obter dados do motorista
-    FireStoreUtils.getCurrentUser(MyAppState.currentUser!.userID).then((value) {
-      _driverModel = value;
-    });
-  }
-
-  void getOSMPolyline() {
-    // Implementação da lógica para obter polylines para OSM
-  }
-
-  void getDirections() {
-    // Implementação da lógica para obter direções (Google Maps)
-  }
 
   setIcons() async {
     if (selectedMapType == 'google') {
@@ -191,7 +158,7 @@ class HomeScreenState extends State<HomeScreen> {
             useExternalTracking: false); //OSM
       });
     }
-    getDriver();
+
     setIcons();
     updateDriverOrder();
     getCurrentOrder(); // Garantir que currentOrder seja inicializado
@@ -247,19 +214,18 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   getCurrentOrder() async {
-    ordersFuture = FireStoreUtils()
-        .getOrderByID(MyAppState.currentUser!.inProgressOrderID.toString());
-    ordersFuture.listen((event) {
-      print("------->${event!.status}");
-      setState(() {
-        currentOrder = event;
-        if (selectedMapType == "osm") {
-          getOSMPolyline();
-        } else {
-          getDirections();
+    if (MyAppState.currentUser != null) {
+      ordersFuture = FireStoreUtils()
+          .getOrderByID(MyAppState.currentUser!.inProgressOrderID.toString());
+      ordersFuture.listen((event) {
+        if (event != null) {
+          print("------->${event.status}");
+          setState(() {
+            currentOrder = event;
+          });
         }
       });
-    });
+    }
   }
 
   void startTimer(User _driverModel) {
@@ -270,7 +236,8 @@ class HomeScreenState extends State<HomeScreen> {
         print("startTimer00000");
         print(driverOrderAcceptRejectDuration);
         if (driverOrderAcceptRejectDuration == 0) {
-          if (MyAppState.currentUser!.inProgressOrderID != '') {
+          if (MyAppState.currentUser != null &&
+              MyAppState.currentUser!.inProgressOrderID != '') {
             audioPlayer.stop();
             OrderModel? order = await FireStoreUtils()
                 .getOrderByID(
@@ -282,8 +249,10 @@ class HomeScreenState extends State<HomeScreen> {
                 order.status == ORDER_STATUS_REJECTED) {
               timer.cancel();
               audioPlayer.stop();
-              MyAppState.currentUser!.inProgressOrderID = '';
-              FireStoreUtils.updateCurrentUser(MyAppState.currentUser!);
+              if (MyAppState.currentUser != null) {
+                MyAppState.currentUser!.inProgressOrderID = '';
+                FireStoreUtils.updateCurrentUser(MyAppState.currentUser!);
+              }
               setState(() {});
             } else if (order.status == ORDER_STATUS_ACCEPTED) {
               audioPlayer.stop();
@@ -333,59 +302,6 @@ class HomeScreenState extends State<HomeScreen> {
     audioPlayer.dispose();
     _eventSubscription?.cancel();
     super.dispose();
-  }
-
-  // Adicionando função para testar envio de notificação
-  Future<void> testSendNotification() async {
-    try {
-      // Obtém o token FCM do usuário atual
-      String token = await NotificationService.getToken();
-
-      // Prepara os dados da notificação
-      Map<String, dynamic> payload = {
-        'type': 'new_order',
-        'orderId': 'test_order_${DateTime.now().millisecondsSinceEpoch}',
-        'customerId': 'test_customer',
-        'customerName': 'Cliente Teste',
-        'customerProfileImage': 'https://example.com/image.jpg',
-        'restaurantId': 'test_restaurant',
-        'restaurantName': 'Restaurante Teste',
-        'restaurantProfileImage': 'https://example.com/restaurant.jpg',
-        'token': token,
-        'chatType': 'order'
-      };
-
-      // Envia a notificação
-      bool success = await SendNotification.sendFcmMessage(
-          'new_order', // tipo da notificação
-          token, // token do dispositivo
-          payload // dados adicionais
-          );
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Notification sent successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error sending notification'.tr()),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error sending notification: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'.tr()),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   void showOrderDetailsPopup(String orderId) async {
@@ -625,14 +541,18 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   updateOrder(String orderId, String status) {
-    FireStoreUtils.updateOrderDriverId(
-        orderId: orderId,
-        driverId: MyAppState.currentUser?.userID ?? '',
-        driverStatus: status);
+    if (MyAppState.currentUser != null) {
+      FireStoreUtils.updateOrderDriverId(
+          orderId: orderId,
+          driverId: MyAppState.currentUser!.userID,
+          driverStatus: status);
+    }
   }
   //
 
   Future<double> getDailyEarnings() async {
+    if (MyAppState.currentUser == null) return 0.0;
+
     DateTime now = DateTime.now();
     DateTime startOfDay = DateTime(now.year, now.month, now.day);
     QuerySnapshot snapshot = await FirebaseFirestore.instance
@@ -650,6 +570,8 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRideStats() async {
+    if (MyAppState.currentUser == null) return;
+
     final userId = MyAppState.currentUser!.userID;
     final firestore = FirebaseFirestore.instance;
     DateTime now = DateTime.now();
@@ -768,7 +690,7 @@ class HomeScreenState extends State<HomeScreen> {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              'Total Balance: ${MyAppState.currentUser!.walletAmount.toStringAsFixed(2)} MT'
+                              'Total Balance: ${MyAppState.currentUser?.walletAmount.toStringAsFixed(2) ?? '0.00'} MT'
                                   .tr(),
                               style: TextStyle(
                                   fontSize: 12, color: Colors.grey.shade500),

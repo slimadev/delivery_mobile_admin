@@ -1,15 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:emartdriver/constants.dart';
 import 'package:emartdriver/services/helper.dart';
-import 'package:emartdriver/ui/login/LoginScreen.dart';
 import 'package:emartdriver/ui/phoneAuth/PhoneNumberInputScreen.dart';
-import 'package:emartdriver/ui/signUp/SignUpScreen.dart';
 import 'package:flutter/material.dart';
-import 'package:emartdriver/theme/app_them_data.dart';
 import 'package:emartdriver/model/User.dart';
 import 'package:emartdriver/repositories/user_repository.dart';
-import 'package:emartdriver/userPrefrence.dart';
 import 'package:emartdriver/ui/container/ContainerScreen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthScreen extends StatefulWidget {
   @override
@@ -391,10 +388,9 @@ class _AuthScreenState extends State<AuthScreen> {
           _otpController.text,
           _passwordController.text,
         );
-        await Future.delayed(Duration(seconds: 2));
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setBool(AUTHENTICATED, true);
         if (user != null) {
-          // Salva o token do usuário e vai para ContainerScreen
-          UserPreference.setUserToken(token: user.userID);
           push(context, ContainerScreen(user: user));
         }
       } catch (e) {

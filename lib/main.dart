@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -17,7 +16,6 @@ import 'package:emartdriver/ui/container/ContainerScreen.dart';
 import 'package:emartdriver/ui/onBoarding/on_boarding_screen.dart';
 import 'package:emartdriver/userPrefrence.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -277,20 +275,35 @@ class OnBoarding extends StatefulWidget {
 }
 
 class OnBoardingState extends State<OnBoarding> {
-  @override
   Future hasFinishedOnBoarding() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool finishedOnBoarding = (prefs.getBool(FINISHED_ON_BOARDING) ?? false);
     bool authenticated = (prefs.getBool(AUTHENTICATED) ?? false);
     bool registerFinished = (prefs.getBool(REGISTER_FINISHED) ?? false);
-    String? userToken = prefs.getString(USER_TOKEN);
+    String? userToken = UserPreference.getUserToken();
+
+    print(":::::::authenticated:::::: $authenticated");
+    print(":::::::finishedOnBoarding:::::: $finishedOnBoarding");
+    print(":::::::registerFinished:::::: $registerFinished");
+    print(":::::::userToken:::::: $userToken");
 
     if (finishedOnBoarding) {
       if (userToken != null && userToken.isNotEmpty) {
-        User? savedUser = await UserRepository.getUserProfile(userToken);
-        if (savedUser != null && savedUser.role == USER_ROLE_DRIVER) {
-          MyAppState.currentUser = savedUser;
-          pushAndRemoveUntil(context, ContainerScreen(user: savedUser), false);
+        try {
+          User? savedUser = await UserRepository.getUserProfile(userToken);
+          if (savedUser != null) {
+            MyAppState.currentUser = savedUser;
+            pushAndRemoveUntil(
+                context, ContainerScreen(user: savedUser), false);
+            return;
+          } else {
+            UserPreference.removeUserToken();
+            pushReplacement(context, PhoneNumberInputScreen(login: true));
+            return;
+          }
+        } catch (e) {
+          UserPreference.removeUserToken();
+          pushReplacement(context, PhoneNumberInputScreen(login: true));
           return;
         }
       } else {

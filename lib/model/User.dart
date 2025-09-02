@@ -248,6 +248,35 @@ class User with ChangeNotifier {
       }
     }
 
+    // Função auxiliar para converter tipos de forma segura
+    String safeString(dynamic value, {String defaultValue = ''}) {
+      if (value == null) return defaultValue;
+      return value.toString();
+    }
+
+    // Função auxiliar para converter números de forma segura
+    num safeNum(dynamic value, {num defaultValue = 0}) {
+      if (value == null) return defaultValue;
+      if (value is num) return value;
+      if (value is String) {
+        return num.tryParse(value) ?? defaultValue;
+      }
+      return defaultValue;
+    }
+
+    // Função auxiliar para converter boolean de forma segura
+    bool safeBool(dynamic value, {bool defaultValue = false}) {
+      if (value == null) return defaultValue;
+      if (value is bool) return value;
+      if (value is String) {
+        return value.toLowerCase() == 'true' || value == '1';
+      }
+      if (value is int) {
+        return value == 1;
+      }
+      return defaultValue;
+    }
+
     List<AddressModel>? shippingAddressList = [];
     if (parsedJson['shippingAddress'] != null) {
       shippingAddressList = <AddressModel>[];
@@ -274,17 +303,17 @@ class User with ChangeNotifier {
     }
 
     return User(
-      email: parsedJson['email'] ?? '',
-      rideType: parsedJson['rideType'] ?? '',
-      rechargeBalance: parsedJson['recharge_balance'] ?? 0.0,
-      earningsBalance: parsedJson['earnings_balance'] ?? 0.0,
+      email: safeString(parsedJson['email']),
+      rideType: safeString(parsedJson['rideType']),
+      rechargeBalance: safeNum(parsedJson['recharge_balance']),
+      earningsBalance: safeNum(parsedJson['earnings_balance']),
       rechargeHistory: rechargeHistoryList,
       earningsHistory: earningsHistoryList,
       userBankDetails: parsedJson.containsKey('userBankDetails')
           ? UserBankDetails.fromJson(parsedJson['userBankDetails'])
           : UserBankDetails(),
-      firstName: parsedJson['firstName'] ?? '',
-      lastName: parsedJson['lastName'] ?? '',
+      firstName: safeString(parsedJson['firstName'] ?? parsedJson['name']),
+      lastName: safeString(parsedJson['lastName']),
       geoFireData: parsedJson.containsKey('g')
           ? GeoFireData.fromJson(parsedJson['g'])
           : GeoFireData(
@@ -292,33 +321,36 @@ class User with ChangeNotifier {
               geoPoint: GeoPoint(0.0, 0.0),
             ),
       coordinates: parsedJson['coordinates'] ?? GeoPoint(0.0, 0.0),
-      isActive: parsedJson['isActive'] ?? false,
-      isReady: parsedJson['isReady'] ?? false,
-      rotation: parsedJson['rotation'] ?? 0.0,
-      active: parsedJson['active'] ?? true,
-      vehicleType: parsedJson['vehicleType'] ?? '',
-      vehicleId: parsedJson['vehicleId'] ?? '',
-      carMakes: parsedJson['carMakes'] ?? '',
-      lastOnlineTimestamp: parsedJson['lastOnlineTimestamp'],
+      isActive: safeBool(parsedJson['isActive']),
+      isReady: safeBool(parsedJson['isReady']),
+      rotation: safeNum(parsedJson['rotation']),
+      active: safeBool(parsedJson['active'], defaultValue: true),
+      vehicleType: safeString(parsedJson['vehicleType']),
+      vehicleId: safeString(parsedJson['vehicleId']),
+      carMakes: safeString(parsedJson['carMakes']),
+      lastOnlineTimestamp: parsedJson['lastOnlineTimestamp'] ?? Timestamp.now(),
       settings: parsedJson.containsKey('settings')
           ? UserSettings.fromJson(parsedJson['settings'])
           : UserSettings(),
-      phoneNumber: parsedJson['phoneNumber'] ?? '',
-      userID: parsedJson['id'] ?? parsedJson['userID'] ?? '',
-      profilePictureURL: parsedJson['profilePictureURL'] ?? '',
-      driverProofPictureURL: parsedJson['driverProofPictureURL'] ?? '',
-      carProofPictureURL: parsedJson['carProofPictureURL'] ?? '',
-      criminalRecordPictureURL: parsedJson['criminalRecordPictureURL'] ?? '',
-      nuitPictureURL: parsedJson['nuitPictureURL'] ?? '',
+      phoneNumber:
+          safeString(parsedJson['phoneNumber'] ?? parsedJson['phone_number']),
+      userID: safeString(parsedJson['id'] ?? parsedJson['userID']),
+      profilePictureURL:
+          safeString(parsedJson['profilePictureURL'] ?? parsedJson['photo']),
+      driverProofPictureURL: safeString(parsedJson['driverProofPictureURL']),
+      carProofPictureURL: safeString(parsedJson['carProofPictureURL']),
+      criminalRecordPictureURL:
+          safeString(parsedJson['criminalRecordPictureURL']),
+      nuitPictureURL: safeString(parsedJson['nuitPictureURL']),
       criminalRecordStatus: normalizeStatus(parsedJson['criminalRecordStatus']),
       nuitStatus: normalizeStatus(parsedJson['nuitStatus']),
       carProofStatus: normalizeStatus(parsedJson['carProofStatus']),
       driverProofStatus: normalizeStatus(parsedJson['driverProofStatus']),
       profilePictureStatus: normalizeStatus(parsedJson['profilePictureStatus']),
-      fcmToken: parsedJson['fcmToken'] ?? '',
-      serviceType: parsedJson['serviceType'] ?? '',
-      driverRate: parsedJson['driverRate'] ?? '0',
-      carRate: parsedJson['carRate'] ?? '0',
+      fcmToken: safeString(parsedJson['fcmToken']),
+      serviceType: safeString(parsedJson['serviceType']),
+      driverRate: safeString(parsedJson['driverRate'], defaultValue: '0'),
+      carRate: safeString(parsedJson['carRate'], defaultValue: '0'),
       rentalBookingDate: parsedJson['rentalBookingDate'] ?? [],
       carInfo: parsedJson.containsKey('carInfo')
           ? CarInfo.fromJson(parsedJson['carInfo'])
@@ -327,33 +359,35 @@ class User with ChangeNotifier {
           ? UserLocation.fromJson(parsedJson['location'])
           : UserLocation(),
       shippingAddress: shippingAddressList,
-      role: parsedJson['role'] ?? '',
-      carName: parsedJson['carName'] ?? '',
-      carNumber: parsedJson['carNumber'] ?? '',
-      carColor: parsedJson['carColor'] ?? '',
-      carPictureURL: parsedJson['carPictureURL'] ?? '',
+      role: safeString(parsedJson['role']),
+      carName: safeString(parsedJson['carName']),
+      carNumber: safeString(parsedJson['carNumber']),
+      carColor: safeString(parsedJson['carColor']),
+      carPictureURL: safeString(parsedJson['carPictureURL']),
       inProgressOrderID: parsedJson['inProgressOrderID'],
-      reviewsCount: parsedJson['reviewsCount'] ?? 0,
-      reviewsSum: parsedJson['reviewsSum'] ?? 0,
-      sectionId: parsedJson['sectionId'] ?? '',
-      createdAt: parsedJson['createdAt'],
-      completedTrips: parsedJson['completedTrips'] as int? ?? 0,
+      reviewsCount: safeNum(parsedJson['reviewsCount']),
+      reviewsSum: safeNum(parsedJson['reviewsSum']),
+      sectionId: safeString(parsedJson['sectionId']),
+      createdAt: parsedJson['createdAt'] ?? Timestamp.now(),
+      completedTrips: safeNum(parsedJson['completedTrips']).toInt(),
       orderRequestData: parsedJson.containsKey('orderRequestData') &&
               parsedJson['orderRequestData'] != null
           ? OrderModel.fromJson(parsedJson['orderRequestData'])
           : null,
 
-      carProofRejectionReason: parsedJson['carProofRejectionReason'] ?? '',
+      carProofRejectionReason:
+          safeString(parsedJson['carProofRejectionReason']),
       profilePictureRejectionReason:
-          parsedJson['profilePictureRejectionReason'] ?? '',
+          safeString(parsedJson['profilePictureRejectionReason']),
       driverProofRejectionReason:
-          parsedJson['driverProofRejectionReason'] ?? '',
+          safeString(parsedJson['driverProofRejectionReason']),
       criminalRecordRejectionReason:
-          parsedJson['criminalRecordRejectionReason'] ?? '',
-      nuitRejectionReason: parsedJson['nuitRejectionReason'] ?? '',
+          safeString(parsedJson['criminalRecordRejectionReason']),
+      nuitRejectionReason: safeString(parsedJson['nuitRejectionReason']),
       // vehicleProfileImageUrl: parsedJson['vehicleProfileImageUrl'] ?? '',
-      carPictureStatus: parsedJson['carPictureStatus'] ?? '',
-      carPictureRejectionReason: parsedJson['carPictureRejectionReason'] ?? '',
+      carPictureStatus: safeString(parsedJson['carPictureStatus']),
+      carPictureRejectionReason:
+          safeString(parsedJson['carPictureRejectionReason']),
     );
   }
 

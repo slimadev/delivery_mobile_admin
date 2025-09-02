@@ -1,4 +1,3 @@
-import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:emartdriver/constants.dart';
@@ -22,16 +21,13 @@ import 'package:flutter/material.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
 import 'package:emartdriver/ui/faq/FaqScreen.dart';
 import 'package:emartdriver/ui/phoneAuth/PhoneNumberInputScreen.dart';
+import 'package:emartdriver/repositories/user_repository.dart';
 
 enum DrawerSelection {
   Home,
-  Cuisines,
-  Search,
-  Cart,
-  Drivers,
-  rideSetting,
   Profile,
   Orders,
   Logout,
@@ -39,11 +35,8 @@ enum DrawerSelection {
   Faq,
   Help,
   Tutoriais,
-  BankInfo,
   termsCondition,
   privacyPolicy,
-  inbox,
-  chooseLanguage,
 }
 
 class ContainerScreen extends StatefulWidget {
@@ -61,7 +54,6 @@ class ContainerScreen extends StatefulWidget {
 }
 
 class _ContainerScreen extends State<ContainerScreen> {
-  String _appBarTitle = 'Home'.tr();
   final fireStoreUtils = FireStoreUtils();
   late Widget _currentWidget;
   DrawerSelection _drawerSelection = DrawerSelection.Home;
@@ -85,20 +77,17 @@ class _ContainerScreen extends State<ContainerScreen> {
   }
 
   setCurrency() async {
-    /*FireStoreUtils().getCurrency().then((value) => value.forEach((element) {
-          if (element.isactive = true) {
-            currencyData = element;
-          }
-        }));*/
-
-    setState(() {
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Location location = Location();
   LatLng? _currentLatLng;
   GoogleMapController? _mapController;
+  StreamSubscription<LocationData>? _locationSubscription;
 
   updateCurrentLocation() async {
     PermissionStatus permissionStatus = await location.hasPermission();
@@ -108,34 +97,39 @@ class _ContainerScreen extends State<ContainerScreen> {
       location.enableBackgroundMode(enable: true);
       location.changeSettings(
           accuracy: LocationAccuracy.navigation, distanceFilter: 50);
-      location.onLocationChanged.listen((locationData) async {
+      _locationSubscription =
+          location.onLocationChanged.listen((locationData) async {
         locationDataFinal = locationData;
         if (_currentLatLng == null &&
             locationData.latitude != null &&
             locationData.longitude != null) {
-          setState(() {
-            _currentLatLng =
-                LatLng(locationData.latitude!, locationData.longitude!);
-          });
+          if (mounted) {
+            setState(() {
+              _currentLatLng =
+                  LatLng(locationData.latitude!, locationData.longitude!);
+            });
+          }
           if (_mapController != null) {
             _mapController!.animateCamera(
               CameraUpdate.newLatLng(_currentLatLng!),
             );
           }
         }
-        await FireStoreUtils.getCurrentUser(MyAppState.currentUser!.userID)
-            .then((value) {
-          if (value != null) {
-            User driverUserModel = value;
-            if (driverUserModel.isActive == true) {
-              driverUserModel.location = UserLocation(
-                  latitude: locationData.latitude ?? 0.0,
-                  longitude: locationData.longitude ?? 0.0);
-              driverUserModel.rotation = locationData.heading;
-              FireStoreUtils.updateCurrentUser(driverUserModel);
+        if (MyAppState.currentUser != null) {
+          await FireStoreUtils.getCurrentUser(MyAppState.currentUser!.userID)
+              .then((value) {
+            if (value != null) {
+              User driverUserModel = value;
+              if (driverUserModel.isActive == true) {
+                driverUserModel.location = UserLocation(
+                    latitude: locationData.latitude ?? 0.0,
+                    longitude: locationData.longitude ?? 0.0);
+                driverUserModel.rotation = locationData.heading;
+                FireStoreUtils.updateCurrentUser(driverUserModel);
+              }
             }
-          }
-        });
+          });
+        }
       });
     } else {
       await openBackgroundLocationDialog();
@@ -144,34 +138,40 @@ class _ContainerScreen extends State<ContainerScreen> {
           location.enableBackgroundMode(enable: true);
           location.changeSettings(
               accuracy: LocationAccuracy.navigation, distanceFilter: 50);
-          location.onLocationChanged.listen((locationData) async {
+          _locationSubscription =
+              location.onLocationChanged.listen((locationData) async {
             locationDataFinal = locationData;
             if (_currentLatLng == null &&
                 locationData.latitude != null &&
                 locationData.longitude != null) {
-              setState(() {
-                _currentLatLng =
-                    LatLng(locationData.latitude!, locationData.longitude!);
-              });
+              if (mounted) {
+                setState(() {
+                  _currentLatLng =
+                      LatLng(locationData.latitude!, locationData.longitude!);
+                });
+              }
               if (_mapController != null) {
                 _mapController!.animateCamera(
                   CameraUpdate.newLatLng(_currentLatLng!),
                 );
               }
             }
-            await FireStoreUtils.getCurrentUser(MyAppState.currentUser!.userID)
-                .then((value) {
-              if (value != null) {
-                User driverUserModel = value;
-                if (driverUserModel.isActive == true) {
-                  driverUserModel.location = UserLocation(
-                      latitude: locationData.latitude ?? 0.0,
-                      longitude: locationData.longitude ?? 0.0);
-                  driverUserModel.rotation = locationData.heading;
-                  FireStoreUtils.updateCurrentUser(driverUserModel);
+            if (MyAppState.currentUser != null) {
+              await FireStoreUtils.getCurrentUser(
+                      MyAppState.currentUser!.userID)
+                  .then((value) {
+                if (value != null) {
+                  User driverUserModel = value;
+                  if (driverUserModel.isActive == true) {
+                    driverUserModel.location = UserLocation(
+                        latitude: locationData.latitude ?? 0.0,
+                        longitude: locationData.longitude ?? 0.0);
+                    driverUserModel.rotation = locationData.heading;
+                    FireStoreUtils.updateCurrentUser(driverUserModel);
+                  }
                 }
-              }
-            });
+              });
+            }
           });
         }
       });
@@ -237,9 +237,14 @@ class _ContainerScreen extends State<ContainerScreen> {
         });
   }
 
-  DateTime pre_backpress = DateTime.now();
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    _mapController?.dispose();
+    super.dispose();
+  }
 
-  final audioPlayer = AudioPlayer(playerId: "playerId");
+  DateTime pre_backpress = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
@@ -295,25 +300,6 @@ class _ContainerScreen extends State<ContainerScreen> {
                         ],
                       ),
                     ),
-                    // ListTileTheme(
-                    //   style: ListTileStyle.drawer,
-                    //   selectedColor: Color(COLOR_PRIMARY),
-                    //   child: ListTile(
-                    //     selected: _drawerSelection == DrawerSelection.Home,
-                    //     title:
-                    //         Text('Home', style: TextStyle(color: Colors.white))
-                    //             .tr(),
-                    //     onTap: () {
-                    //       Navigator.pop(context);
-                    //       setState(() {
-                    //         _drawerSelection = DrawerSelection.Home;
-                    //         _appBarTitle = 'Home'.tr();
-                    //         _currentWidget = HomeScreen();
-                    //       });
-                    //     },
-                    //     leading: Icon(CupertinoIcons.home, color: Colors.white),
-                    //   ),
-                    // ),
                     ListTileTheme(
                       style: ListTileStyle.drawer,
                       selectedColor: Color(COLOR_PRIMARY),
@@ -358,45 +344,30 @@ class _ContainerScreen extends State<ContainerScreen> {
                             .tr(),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ProfileScreen(user: MyAppState.currentUser!),
-                            ),
-                          );
+                          if (MyAppState.currentUser != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProfileScreen(
+                                    user: MyAppState.currentUser!),
+                              ),
+                            );
+                          }
                         },
                       ),
                     ),
-
                     Divider(
                       color: Colors.white24,
                       height: 0,
                       indent: 10,
                       endIndent: 100,
                     ),
-                    // ListTileTheme(
-                    //   style: ListTileStyle.drawer,
-                    //   selectedColor: Color(COLOR_PRIMARY),
-                    //   child: ListTile(
-                    //     leading: Icon(Icons.history, color: Colors.white),
-                    //     title: Text('Histórico',
-                    //             style: TextStyle(color: Colors.white))
-                    //         .tr(),
-                    //     onTap: () {
-                    //       Navigator.pop(context);
-                    //       // TODO: Implementar tela de histórico
-                    //     },
-                    //   ),
-                    // ),
-
                     Divider(
                       color: Colors.white24,
                       height: 0,
                       indent: 10,
                       endIndent: 100,
                     ),
-
                     ListTileTheme(
                       style: ListTileStyle.drawer,
                       selectedColor: Color(COLOR_PRIMARY),
@@ -423,26 +394,6 @@ class _ContainerScreen extends State<ContainerScreen> {
                       indent: 10,
                       endIndent: 100,
                     ),
-
-                    // ListTileTheme(
-                    //   style: ListTileStyle.drawer,
-                    //   selectedColor: Color(COLOR_PRIMARY),
-                    //   child: ListTile(
-                    //     leading: Icon(Icons.help_outline, color: Colors.white),
-                    //     title: Text('Ajuda e Suporte',
-                    //             style: TextStyle(color: Colors.white))
-                    //         .tr(),
-                    //     onTap: () {
-                    //       Navigator.pop(context);
-                    //       Navigator.push(
-                    //         context,
-                    //         MaterialPageRoute(
-                    //             builder: (context) => SupportChatScreen()),
-                    //       );
-                    //       // TODO: Implementar tela de ajuda e suporte
-                    //     },
-                    //   ),
-                    // ),
                     ListTileTheme(
                       style: ListTileStyle.drawer,
                       selectedColor: Color(COLOR_PRIMARY),
@@ -454,42 +405,21 @@ class _ContainerScreen extends State<ContainerScreen> {
                             .tr(),
                         onTap: () {
                           Navigator.pop(context);
-                          // setState(() {
-                          //   _drawerSelection = DrawerSelection.Help;
-                          //   // _appBarTitle = 'FAQ'.tr();
-                          // });
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                                 builder: (context) =>
-                                    SupportChatScreen(fromDrawer: true
-                                        // user: MyAppState.currentUser!,
-                                        )),
+                                    SupportChatScreen(fromDrawer: true)),
                           );
                         },
                       ),
                     ),
-
                     Divider(
                       color: Colors.white24,
                       height: 0,
                       indent: 10,
                       endIndent: 100,
                     ),
-                    // ListTileTheme(
-                    //   style: ListTileStyle.drawer,
-                    //   selectedColor: Color(COLOR_PRIMARY),
-                    //   child: ListTile(
-                    //     leading: Icon(Icons.school, color: Colors.white),
-                    //     title: Text('Tutoriais',
-                    //             style: TextStyle(color: Colors.white))
-                    //         .tr(),
-                    //     onTap: () {
-                    //       Navigator.pop(context);
-                    //       // TODO: Implementar tela de tutoriais
-                    //     },
-                    //   ),
-                    // ),
                     ListTileTheme(
                       style: ListTileStyle.drawer,
                       selectedColor: Color(COLOR_PRIMARY),
@@ -517,7 +447,6 @@ class _ContainerScreen extends State<ContainerScreen> {
                       indent: 10,
                       endIndent: 100,
                     ),
-
                     ListTileTheme(
                       style: ListTileStyle.drawer,
                       selectedColor: Color(COLOR_PRIMARY),
@@ -629,18 +558,21 @@ class _ContainerScreen extends State<ContainerScreen> {
                             ),
                           );
                           if (shouldLogout != true) return;
-                          audioPlayer.stop();
                           Navigator.pop(context);
-                          await FireStoreUtils.getCurrentUser(
-                                  MyAppState.currentUser!.userID)
-                              .then((value) {
-                            MyAppState.currentUser = value;
-                          });
-                          MyAppState.currentUser!.isActive = false;
-                          MyAppState.currentUser!.lastOnlineTimestamp =
-                              Timestamp.now();
-                          await FireStoreUtils.updateCurrentUser(
-                              MyAppState.currentUser!);
+                          if (MyAppState.currentUser != null) {
+                            await FireStoreUtils.getCurrentUser(
+                                    MyAppState.currentUser!.userID)
+                                .then((value) {
+                              MyAppState.currentUser = value;
+                            });
+                            if (MyAppState.currentUser != null) {
+                              MyAppState.currentUser!.isActive = false;
+                              MyAppState.currentUser!.lastOnlineTimestamp =
+                                  Timestamp.now();
+                              await FireStoreUtils.updateCurrentUser(
+                                  MyAppState.currentUser!);
+                            }
+                          }
                           await auth.FirebaseAuth.instance.signOut();
                           // Limpa o token do usuário
                           UserPreference.removeUserToken();
@@ -791,23 +723,13 @@ class _ContainerScreen extends State<ContainerScreen> {
                           Switch(
                             value: MyAppState.currentUser?.isActive ?? false,
                             onChanged: (bool value) {
-                              if (value &&
-                                  !(MyAppState.currentUser?.isReady ?? false)) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        'Your registration must be approved before you can become available.'
-                                            .tr()),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                return;
+                              if (mounted) {
+                                setState(() {
+                                  MyAppState.currentUser?.isActive = value;
+                                  UserRepository.updateUser(
+                                      MyAppState.currentUser!);
+                                });
                               }
-                              setState(() {
-                                MyAppState.currentUser?.isActive = value;
-                              });
-                              FireStoreUtils.updateCurrentUser(
-                                  MyAppState.currentUser!);
                             },
                             activeColor: Color(COLOR_PRIMARY),
                           ),
